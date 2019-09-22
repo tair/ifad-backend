@@ -1,0 +1,27 @@
+{
+  "name": "@osiris/backend",
+  "version": "0.1.0",
+  "description": "Backend for the iFAD",
+  "main": "index.js",
+  "author": "Joseph Shearer <joseph@josephshearer.net>",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "typescript": "^3.6.3",
+    "typescript-rest": "^2.2.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^24.0.18",
+    "@types/supertest": "^2.0.8",
+    "jest": "^24.9.0",
+    "supertest": "^4.0.2",
+    "ts-jest": "^24.1.0",
+    "ts-node": "^8.4.1",
+    "tslint": "^5.20.0"
+  },
+  "scripts": {
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "test": "jest"
+  }
+}
