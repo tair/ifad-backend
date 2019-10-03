@@ -1,0 +1,15 @@
+## Backend Setup
+
+``` bash
+# install dependencies
+yarn
+
+# run main server
+yarn start
+
+# run automated tests
+yarn test
+
+# kill server
+ctrl+c
+```
