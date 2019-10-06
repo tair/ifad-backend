@@ -355,6 +355,13 @@
   resolved "https://registry.yarnpkg.com/@types/cookiejar/-/cookiejar-2.1.1.tgz#90b68446364baf9efd8e8349bb36bd3852b75b80"
   integrity sha512-aRnpPa7ysx3aNW60hTiCtLHlQaIFsXFCgQlpakNgDNVFzbtusSY8PwjAQgRWfSk0ekNoBjO51eQRB6upA9uuyw==
 
+"@types/csv-parse@^1.2.2":
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/@types/csv-parse/-/csv-parse-1.2.2.tgz#713486235759d615dc8e6a6a979170ada76701d5"
+  integrity sha512-k33tLtRKTQxf7hQfMlkWoS2TQYsnpk1ibZN+rzbuCkeBs8m23nHTeDTF1wb/e7/MSLdtgCzqu3oM1I101kd6yw==
+  dependencies:
+    csv-parse "*"
+
 "@types/express-serve-static-core@*", "@types/express-serve-static-core@^4.16.7":
   version "4.16.9"
   resolved "https://registry.yarnpkg.com/@types/express-serve-static-core/-/express-serve-static-core-4.16.9.tgz#69e00643b0819b024bdede95ced3ff239bb54558"
@@ -1061,6 +1068,11 @@ cssstyle@^1.0.0:
   integrity sha512-GBrLZYZ4X4x6/QEoBnIrqb8B/f5l4+8me2dkom/j1Gtbxy0kBv6OGzKuAsGM75bkGwGAFkt56Iwg28S3XTZgSA==
   dependencies:
     cssom "0.3.x"
+
+csv-parse@*, csv-parse@^4.4.7:
+  version "4.4.7"
+  resolved "https://registry.yarnpkg.com/csv-parse/-/csv-parse-4.4.7.tgz#069de0875b92780ca74a018c9880ab41cb3517a1"
+  integrity sha512-QfjZ9mhBHcNDUM7Ab1sLC5HNa7wVFSl5jDK3lpM0YyvAUb9bVgO1Veht13tWJno8cEZ2eSowFDwcvRCO4BVvNA==
 
 dashdash@^1.12.0:
   version "1.14.1"
