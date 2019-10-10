@@ -1,5 +1,6 @@
 import {Path, GET, QueryParam, Errors} from "typescript-rest";
 import {read_annotations} from "../../utils/ingest";
+import {evidenceCodes} from "../../config";
 
 const annotations = read_annotations("/path/to/gene_association.csv");
 
@@ -29,14 +30,7 @@ export class V1Service {
 }
 
 const evidenceCodeToAnnotationStatus = (evidenceCode: string): string => {
-    const ANNOTATION_STATUSES = {
-        EXP: ["ONE"],
-        OTHER: ["ONE"],
-        UNKNOWN: ["ONE"],
-        UNANNOTATED: ["ONE"],
-    };
-
-    const value = Object.entries(ANNOTATION_STATUSES)
+    const value = Object.entries(evidenceCodes)
         .find(([_, value]) => evidenceCode in value);
 
     if (value) {
