@@ -70,6 +70,7 @@ export const parse_genes = (input: string): IGene[] => {
     return parse(input, {
         columns: GENE_COLUMNS,
         skip_empty_lines: true,
+        skip_lines_with_error: true,
         delimiter: "\t",
         relax: true,
         cast: true,
@@ -83,5 +84,7 @@ export const read_annotations = (filename: string) => {
 };
 
 export const read_genes = (filename: string) => {
-    return parse_genes(readFileSync(filename).toString());
+    const buffer = readFileSync(filename).toString();
+    const trimmed = buffer.slice(buffer.indexOf("\n"));
+    return parse_genes(trimmed);
 };

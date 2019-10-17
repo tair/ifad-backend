@@ -1,8 +1,10 @@
 import {Path, GET, QueryParam, Errors} from "typescript-rest";
-import {read_annotations} from "../../utils/ingest";
+import {read_annotations, read_genes} from "../../utils/ingest";
 import {evidenceCodes} from "../../config";
 
 const annotations = read_annotations("/path/to/gene_association.csv");
+const genes = read_genes("/path/to/gene-types.txt");
+//const genes = read_genes("/Users/ChikeUdenze/Documents/ifad-backend/src/gene-types.txt");
 
 @Path("/api/v1")
 export class V1Service {
@@ -24,8 +26,7 @@ export class V1Service {
                 return item.Aspect === aspect;
             });
         });
-
-        return data;
+        return [data, genes];
     }
 }
 
