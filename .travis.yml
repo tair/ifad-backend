@@ -10,6 +10,8 @@ branches:
 
 install:
   - docker build -t npm/lts .
+  - docker run -d -p 127.0.0.1:80:4567 npm/lts
 
 script:
   - docker run npm/lts
+  - yarn test
