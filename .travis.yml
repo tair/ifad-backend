@@ -1,0 +1,15 @@
+language: node_js
+
+services:
+  - docker
+
+branches:
+  only:
+    - master
+    - add_travis
+
+install:
+  - docker build -t npm/lts .
+
+script:
+  - docker run npm/lts
