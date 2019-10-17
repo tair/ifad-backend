@@ -5,14 +5,10 @@ node_js:
 services:
   - docker
 
-branches:
-  only:
-    - master
-    - add_travis
-
 install:
   - docker build -t npm/lts .
   - docker run -d -p 127.0.0.1:80:4567 npm/lts
+  - npm install
 
 script:
   - yarn test
