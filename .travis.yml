@@ -6,8 +6,8 @@ services:
   - docker
 
 install:
-  - docker build -t npm/lts .
-  - docker run -d -p 127.0.0.1:80:4567 npm/lts
+  - docker build -t ifad/backend .
+  - docker run -d -p 127.0.0.1:80:4567 ifad/backend
   - npm install
 
 script:
