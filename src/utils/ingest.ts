@@ -1,5 +1,7 @@
 import parse from "csv-parse/lib/sync";
 import { readFileSync } from "fs";
+import {evidenceCodes} from "../config";
+import {Errors} from "typescript-rest";
 
 const ANNOTATION_COLUMNS = [
     null,
@@ -26,14 +28,18 @@ const GENE_COLUMNS = [
     "GeneProductType",
 ];
 
-interface IAnnotation {
+export type Aspect = "F" | "P" | "C";
+export type AnnotationStatus = "EXP" | "OTHER" | "UNKNOWN" | "UNANNOTATED";
+
+export interface IAnnotation {
     DatabaseID: string;
     Invert: boolean;
     GOTerm: string;
     Reference: string;
     EvidenceCode: string;
     AdditionalEvidence: string;
-    Aspect: "F" | "P" | "C";
+    Aspect: Aspect;
+    AnnotationStatus: AnnotationStatus;
     UniqueGeneName: string;
     AlternativeGeneName: string;
     GeneProductType: string;
@@ -41,7 +47,7 @@ interface IAnnotation {
     AssignedBy: string;
 }
 
-interface IGene {
+export interface IGene {
     GeneID: string;
     GeneProductType: string;
 }
@@ -63,7 +69,21 @@ export const parse_annotations = (input: string): IAnnotation[] => {
                 return value;
             }
         },
-    });
+    })
+    .map(item => ({
+        ...item,
+        AnnotationStatus: evidenceCodeToAnnotationStatus(item.EvidenceCode)
+    }));
+};
+
+const evidenceCodeToAnnotationStatus = (evidenceCode: string): AnnotationStatus => {
+    if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) {
+        return "EXP";
+    } else if (evidenceCodes.UNKNOWN.includes(evidenceCode)) {
+        return "UNKNOWN";
+    } else {
+        return "OTHER";
+    }
 };
 
 export const parse_genes = (input: string): IGene[] => {
