@@ -17,7 +17,7 @@ const geneMap: { [key: string]: IGene } = genes.reduce((acc, current) => {
  * _all_ filters match the given set of filters (intersection),
  * or those for which at least one filter matches (union).
  */
-type Selector = (_: (value: IFilter) => boolean) => boolean;
+type Selector = (_: (filter: IFilter) => boolean) => boolean;
 
 @Path("/api/v1")
 export class V1Service {
@@ -41,30 +41,39 @@ export class V1Service {
         @QueryParam("strategy") maybeStrategy: string = "union",
     ) {
         // Validate all of the filter query params. This throws a 400 if any are formatted incorrectly.
-        const filters: IFilter[] = (maybeFilters || []).map(validateFilter);
+        const allFilters: IFilter[] = (maybeFilters || []).map(validateFilter);
 
         // Validates the strategy query param string, which must be exactly "union" or "intersection".
         const strategy: Strategy = validateStrategy(maybeStrategy);
 
         // Create a selector which matches the union or intersection of filters.
-        const selector: Selector = ((strategy === "union") ? filters.some : filters.every).bind(filters);
+        const getSelector = (filters: IFilter[]) => (pred: (IFilter) => boolean) =>
+            (strategy === "union") ? filters.some(pred) : filters.every(pred);
 
-        const annotatedFilters = filters.filter(({ annotation_status }) => annotation_status !== "UNANNOTATED");
-        // const unannotatedFilters = filters.filter(({ annotation_status }) => annotation_status === "UNANNOTATED");
+        const annotatedFilters = allFilters.filter(({ annotation_status }) => annotation_status !== "UNANNOTATED");
+        const unannotatedFilters = allFilters.filter(({ annotation_status }) => annotation_status === "UNANNOTATED");
 
-        const [annotatedGenes, annotations] = queryAnnotated(annotatedFilters, selector);
-        return { annotatedGenes, annotations };
+        let [annotatedGenes, annotations]: [IGene[], IAnnotation[]] = [[], []];
+        if (annotatedFilters.length > 0) {
+            [annotatedGenes, annotations] = queryAnnotated(getSelector(annotatedFilters))
+        }
+
+        let unannotatedGenes: IGene[] = [];
+        if (unannotatedFilters.length > 0) {
+            unannotatedGenes = queryUnannotated(getSelector(unannotatedFilters));
+        }
+
+        return { annotatedGenes, annotations, unannotatedGenes };
     }
 }
 
 /**
- * Given a set of filters and a selector, return a subset of genes and a
+ * Given a selector over Annotated genes, return a subset of genes and a
  * subset of annotations which match the criteria.
  *
- * @param filters Represent subsets of annotation and gene data to pick.
- * @param selector Whether to apply the filters as a union or intersection.
+ * @param selector A function which applies the filters as a union or intersection.
  */
-const queryAnnotated = (filters: IFilter[], selector: Selector): [IGene[], IAnnotation[]] => {
+const queryAnnotated = (selector: Selector): [IGene[], IAnnotation[]] => {
     const queriedAnnotations =
         annotations.filter((item: IAnnotation) =>
             selector(({ aspect, annotation_status }: IFilter) =>
@@ -72,9 +81,41 @@ const queryAnnotated = (filters: IFilter[], selector: Selector): [IGene[], IAnno
                 item.AnnotationStatus === annotation_status
             ));
 
-    const queriedGeneNames = Array.from(new Set(queriedAnnotations.map(annotation => annotation.UniqueGeneName)));
-    const queriedGenes = queriedGeneNames.map(name => geneMap[name]);
+    const queriedGeneNames = Array.from(
+        new Set(queriedAnnotations
+            .map(annotation => ([annotation.UniqueGeneName, ...annotation.AlternativeGeneName]))
+            .reduce((acc, current) => {
+                acc.push(...current);
+                return acc;
+            }, []))
+    );
+
+    const queriedGenes = queriedGeneNames
+        .map(name => geneMap[name])
+        .filter(gene => !!gene);
     return [queriedGenes, queriedAnnotations];
+};
+
+/**
+ * Given a selector over Unannotated genes, return a subset of genes which
+ * match the filter criteria of the selector.
+ *
+ * @param selector A function which applies the filters as a union or intersection.
+ */
+const queryUnannotated = (selector: Selector): IGene[] => {
+
+    const queriedAnnotations =
+        annotations.filter((item: IAnnotation) =>
+            selector(({ aspect }: IFilter) => item.Aspect === aspect ));
+
+    const annotatedGeneNames = new Set(queriedAnnotations
+        .map(annotation => annotation.AlternativeGeneName)
+        .reduce((acc, current) => {
+            acc.push(...current);
+            return acc;
+    }, []));
+
+    return genes.filter(gene => !annotatedGeneNames.has(gene.GeneID));
 };
 
 /**

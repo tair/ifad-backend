@@ -41,7 +41,7 @@ export interface IAnnotation {
     Aspect: Aspect;
     AnnotationStatus: AnnotationStatus;
     UniqueGeneName: string;
-    AlternativeGeneName: string;
+    AlternativeGeneName: string[];
     GeneProductType: string;
     Date: string;
     AssignedBy: string;
@@ -52,6 +52,7 @@ export interface IGene {
     GeneProductType: string;
 }
 
+const GENE_NAME_REGEX = /^AT\dG\d{5}$/.compile();
 export const parse_annotations = (input: string): IAnnotation[] => {
     return parse(input, {
         columns: ANNOTATION_COLUMNS,
@@ -65,6 +66,14 @@ export const parse_annotations = (input: string): IAnnotation[] => {
                 return value.split("|");
             } else if (context.column === "Date") {
                 return new Date(Date.parse(`${value.slice(0,4)}-${value.slice(4,6)}-${value.slice(6,8)}`));
+            } else if (context.column === "UniqueGeneName") {
+                if (!GENE_NAME_REGEX.test(value)) {
+                    // Parser never enters this block.
+                    // Makes me think that the parser is reading the correct value but
+                    // assigning them to the wrong key in the record.
+                    return null;
+                }
+                return value;
             } else {
                 return value;
             }
