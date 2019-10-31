@@ -1,5 +1,7 @@
 import parse from "csv-parse/lib/sync";
 import { readFileSync } from "fs";
+import {evidenceCodes} from "../config";
+import {Errors} from "typescript-rest";
 
 const ANNOTATION_COLUMNS = [
     null,
@@ -26,26 +28,31 @@ const GENE_COLUMNS = [
     "GeneProductType",
 ];
 
-interface IAnnotation {
+export type Aspect = "F" | "P" | "C";
+export type AnnotationStatus = "EXP" | "OTHER" | "UNKNOWN" | "UNANNOTATED";
+
+export interface IAnnotation {
     DatabaseID: string;
     Invert: boolean;
     GOTerm: string;
     Reference: string;
     EvidenceCode: string;
     AdditionalEvidence: string;
-    Aspect: "F" | "P" | "C";
+    Aspect: Aspect;
+    AnnotationStatus: AnnotationStatus;
     UniqueGeneName: string;
-    AlternativeGeneName: string;
+    AlternativeGeneName: string[];
     GeneProductType: string;
     Date: string;
     AssignedBy: string;
 }
 
-interface IGene {
+export interface IGene {
     GeneID: string;
     GeneProductType: string;
 }
 
+const GENE_NAME_REGEX = /^AT\dG\d{5}$/.compile();
 export const parse_annotations = (input: string): IAnnotation[] => {
     return parse(input, {
         columns: ANNOTATION_COLUMNS,
@@ -59,17 +66,40 @@ export const parse_annotations = (input: string): IAnnotation[] => {
                 return value.split("|");
             } else if (context.column === "Date") {
                 return new Date(Date.parse(`${value.slice(0,4)}-${value.slice(4,6)}-${value.slice(6,8)}`));
+            } else if (context.column === "UniqueGeneName") {
+                if (!GENE_NAME_REGEX.test(value)) {
+                    // Parser never enters this block.
+                    // Makes me think that the parser is reading the correct value but
+                    // assigning them to the wrong key in the record.
+                    return null;
+                }
+                return value;
             } else {
                 return value;
             }
         },
-    });
+    })
+    .map(item => ({
+        ...item,
+        AnnotationStatus: evidenceCodeToAnnotationStatus(item.EvidenceCode)
+    }));
+};
+
+const evidenceCodeToAnnotationStatus = (evidenceCode: string): AnnotationStatus => {
+    if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) {
+        return "EXP";
+    } else if (evidenceCodes.UNKNOWN.includes(evidenceCode)) {
+        return "UNKNOWN";
+    } else {
+        return "OTHER";
+    }
 };
 
 export const parse_genes = (input: string): IGene[] => {
     return parse(input, {
         columns: GENE_COLUMNS,
         skip_empty_lines: true,
+        skip_lines_with_error: true,
         delimiter: "\t",
         relax: true,
         cast: true,
@@ -83,5 +113,7 @@ export const read_annotations = (filename: string) => {
 };
 
 export const read_genes = (filename: string) => {
-    return parse_genes(readFileSync(filename).toString());
+    const buffer = readFileSync(filename).toString();
+    const trimmed = buffer.slice(buffer.indexOf("\n"));
+    return parse_genes(trimmed);
 };
