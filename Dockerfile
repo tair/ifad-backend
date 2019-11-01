@@ -1,14 +1,14 @@
-FROM node:lts as build
+FROM nicholastmosher/ifad-frontend:latest AS frontend
 
-ADD ./ /proj_build
-WORKDIR /proj_build
+FROM node:lts as backend
+
+WORKDIR /ifad/backend
+COPY --from=frontend /frontend /ifad/frontend
+COPY . .
 
 RUN yarn
+
+ENV FRONTEND_PUBLIC_PATH /ifad/frontend
 RUN yarn build
-
-FROM node:lts
-
-COPY --from=build /proj_build /project
-WORKDIR /project
 
 CMD ["yarn", "start"]
