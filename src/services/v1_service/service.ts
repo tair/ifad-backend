@@ -65,6 +65,103 @@ export class V1Service {
 
         return { annotatedGenes, annotations, unannotatedGenes };
     }
+
+    @Path("/test")
+    @GET
+    test_func(){
+        return genes;
+    }
+
+    @Path("/wgs_segments")
+    @GET
+    get_wgs(){
+        let final = {
+            'P': [{
+                "name": "EXP",
+                "value": 0 },
+                {
+                    "name": "OTHER",
+                    "value": 0
+                },
+                {
+                    "name": "UNKNOWN",
+                    "value": 0
+                },
+                {
+                    "name": "UNANNOTATED",
+                    "value": 0
+                }],
+            'F':[
+                {
+                    "name": "EXP",
+                    "value": 0 },
+                {
+                    "name": "OTHER",
+                    "value": 0
+                },
+                {
+                    "name": "UNKNOWN",
+                    "value": 0
+                },
+                {
+                    "name": "UNANNOTATED",
+                    "value": 0
+                }],
+            'C': [{
+                "name": "EXP",
+                "value": 0 },
+                {
+                    "name": "OTHER",
+                    "value": 0
+                },
+                {
+                    "name": "UNKNOWN",
+                    "value": 0
+                },
+                {
+                    "name": "UNANNOTATED",
+                    "value": 0
+                }]};
+
+        const geneSet = new Set();
+        for (let x of genes){
+            if (!(x.GeneProductType === "pseudogene")){
+                geneSet.add(x.GeneID)
+            }
+        }
+        for (let i of Object.keys(final)){
+            let expSet = new Set();
+            let unkSet = new Set();
+            let otherSet = new Set();
+            let unanSet = new Set();
+
+            for (let j of annotations){
+                if(j.Aspect === i ){
+                    if((j.AnnotationStatus === "EXP") && geneSet.has(j.UniqueGeneName) ){
+                        final[i][0].value += 1;
+                        expSet.add(j.UniqueGeneName)
+                    }
+                    else if((j.AnnotationStatus === "UNKNOWN") && !(unkSet.has(j.UniqueGeneName)) && geneSet.has(j.UniqueGeneName) ){
+                        final[i][2].value += 1;
+                        unkSet.add(j.UniqueGeneName)
+                    }
+                    else if((j.AnnotationStatus === "OTHER") && !(otherSet.has(j.UniqueGeneName)) && geneSet.has(j.UniqueGeneName)){
+                        final[i][1].value += 1;
+                        otherSet.add(j.UniqueGeneName)
+                    }
+                    //else if(j.EvidenceCode === 'TAS'|| j.EvidenceCode === 'IC' || j.EvidenceCode === 'NAS' || j.EvidenceCode === 'IEA' ){}
+                    else if (!(unanSet.has(j.UniqueGeneName)) && geneSet.has(j.UniqueGeneName)) {
+                        console.log((j.EvidenceCode));
+                        final[i][3].value += 1;
+                        unanSet.add(j.UniqueGeneName)
+                    }
+                }
+            }
+            //console.log(expSet)
+
+        }
+        return final;
+    }
 }
 
 /**

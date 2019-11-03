@@ -1,7 +1,6 @@
 import parse from "csv-parse/lib/sync";
 import { readFileSync } from "fs";
 import {evidenceCodes} from "../config";
-import {Errors} from "typescript-rest";
 
 const ANNOTATION_COLUMNS = [
     null,
