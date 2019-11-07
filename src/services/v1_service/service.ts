@@ -3,18 +3,14 @@ import {AnnotationStatus, Aspect, IAnnotation, IGene, read_annotations, read_gen
 
 const annotations = read_annotations(process.env["ANNOTATIONS_FILE"] || "src/assets/gene_association.csv");
 const genes = read_genes(process.env["GENES_FILE"] || "src/assets/gene-types.txt");
-const geneMap: { [key: string]: IGene } = genes.reduce((acc, current) => {
-    acc[current.GeneID] = current;
-    return acc;
-}, {});
+const geneMap: { [key: string]: IGene } = genes
+    // .filter(gene => gene.GeneProductType !== "pseudogene")
+    .filter(gene => gene.GeneProductType === "protein_coding")
+    .reduce((acc, current) => {
+        acc[current.GeneID] = current;
+        return acc;
+    }, {});
 delete geneMap["name"];
-const geneSet = new Set();
-for (let x of genes){
-    if (!(x.GeneProductType === "pseudogene")){
-        geneSet.add(x.GeneID)
-    }
-}
-
 
 /**
  * A Selector is a function which checks whether the filters
@@ -85,86 +81,48 @@ export class V1Service {
     @GET
     get_wgs(){
         let final = {
-            'P': [{
-                "name": "EXP",
-                "value": 0 },
-                {
-                    "name": "OTHER",
-                    "value": 0
-                },
-                {
-                    "name": "UNKNOWN",
-                    "value": 0
-                },
-                {
-                    "name": "UNANNOTATED",
-                    "value": 0
-                }],
-            'F':[
-                {
-                    "name": "EXP",
-                    "value": 0 },
-                {
-                    "name": "OTHER",
-                    "value": 0
-                },
-                {
-                    "name": "UNKNOWN",
-                    "value": 0
-                },
-                {
-                    "name": "UNANNOTATED",
-                    "value": 0
-                }],
-            'C': [{
-                "name": "EXP",
-                "value": 0 },
-                {
-                    "name": "OTHER",
-                    "value": 0
-                },
-                {
-                    "name": "UNKNOWN",
-                    "value": 0
-                },
-                {
-                    "name": "UNANNOTATED",
-                    "value": 0
-                }]};
+            P: {
+                EXP: new Set(),
+                OTHER: new Set(),
+                UNKNOWN: new Set(),
+                UNANNOTATED: new Set(),
+            },
+            F: {
+                EXP: new Set(),
+                OTHER: new Set(),
+                UNKNOWN: new Set(),
+                UNANNOTATED: new Set(),
+            },
+            C: {
+                EXP: new Set(),
+                OTHER: new Set(),
+                UNKNOWN: new Set(),
+                UNANNOTATED: new Set(),
+            },
+        };
 
-        for (let i of Object.keys(final)){
-            let expSet = new Set();
-            let unkSet = new Set();
-            let otherSet = new Set();
-            let unanSet = new Set();
-
-            for (let j of annotations){
-
-                if(getGeneId(j) !== null){
-                    let id = getGeneId(j);
-                    if(j.Aspect === i ){
-                        if(j.AnnotationStatus === "EXP" ){
-                            final[i][0].value += 1;
-                            expSet.add(id);
-
-                        }
-                        else if(j.AnnotationStatus === "UNKNOWN" ){
-                            final[i][2].value += 1;
-                            unkSet.add(id);
-                        }
-                        else if(j.AnnotationStatus === "OTHER"){
-                            final[i][1].value += 1;
-                            otherSet.add(id);
-                        }
-                        else {
-                            final[i][3].value += 1;
-                            unanSet.add(id)
-                        }
-                    }
-                }
+        for (let annotation of annotations) {
+            let geneId;
+            if (!!(geneId = getGeneId(annotation))) {
+                final[annotation.Aspect][annotation.AnnotationStatus].add(geneId);
             }
         }
-        return final;
+
+        const geneCount = Object.keys(geneMap).length;
+        let aspects = {};
+        Object.entries(final).map(([aspect, statuses]) => {
+            let annotation_statuses = {};
+            let count_in_aspect = 0;
+            Object.entries(statuses).map(([status, genes]) => {
+                count_in_aspect += genes.size;
+                annotation_statuses[status] = genes.size;
+            });
+            annotation_statuses["UNANNOTATED"] = geneCount - count_in_aspect;
+            annotation_statuses["TOTAL"] = geneCount;
+            aspects[aspect] = annotation_statuses;
+        });
+
+        return aspects;
     }
 }
 
@@ -306,16 +264,17 @@ function validateStrategy(maybeStrategy: string): Strategy {
  * @param {IAnnotation} annotation
  * @returns {string}
  */
-
-function getGeneId(annotation: IAnnotation): string {
-    let geneID;
-    for(let i of annotation.AlternativeGeneName){
-        if (i in geneMap){
-            geneID = i
-        }
-        else{
-            geneID = null
-        }
-    }
-    return geneID;
+function getGeneId(annotation: IAnnotation): string | undefined {
+    // return annotation.AlternativeGeneName.find(alternateGeneName => Object.keys(geneMap).includes(alternateGeneName));
+    return annotation.AlternativeGeneName.find(alternateGeneName => !!geneMap[alternateGeneName]);
+    // let geneID;
+    // for(let i of annotation.AlternativeGeneName){
+    //     if (i in geneMap){
+    //         geneID = i
+    //     }
+    //     else{
+    //         geneID = null
+    //     }
+    // }
+    // return geneID;
 }
