@@ -1,12 +1,20 @@
 import {Errors, GET, Path, QueryParam} from "typescript-rest";
 import {AnnotationStatus, Aspect, IAnnotation, IGene, read_annotations, read_genes} from "../../utils/ingest";
 
-const annotations = read_annotations(process.env["ANNOTATIONS_FILE"] || "../../assets/gene_association.tair");
-const genes = read_genes(process.env["GENES_FILE"] || "../../assets/gene-types.txt");
+const annotations = read_annotations(process.env["ANNOTATIONS_FILE"] || "src/assets/gene_association.csv");
+const genes = read_genes(process.env["GENES_FILE"] || "src/assets/gene-types.txt");
 const geneMap: { [key: string]: IGene } = genes.reduce((acc, current) => {
     acc[current.GeneID] = current;
     return acc;
 }, {});
+delete geneMap["name"];
+const geneSet = new Set();
+for (let x of genes){
+    if (!(x.GeneProductType === "pseudogene")){
+        geneSet.add(x.GeneID)
+    }
+}
+
 
 /**
  * A Selector is a function which checks whether the filters
@@ -68,9 +76,10 @@ export class V1Service {
 
     @Path("/test")
     @GET
-    test_func(){
-        return genes;
+    async test_func(){
+        return geneMap
     }
+
 
     @Path("/wgs_segments")
     @GET
@@ -123,12 +132,6 @@ export class V1Service {
                     "value": 0
                 }]};
 
-        const geneSet = new Set();
-        for (let x of genes){
-            if (!(x.GeneProductType === "pseudogene")){
-                geneSet.add(x.GeneID)
-            }
-        }
         for (let i of Object.keys(final)){
             let expSet = new Set();
             let unkSet = new Set();
@@ -136,29 +139,30 @@ export class V1Service {
             let unanSet = new Set();
 
             for (let j of annotations){
-                if(j.Aspect === i ){
-                    if((j.AnnotationStatus === "EXP") && geneSet.has(j.UniqueGeneName) ){
-                        final[i][0].value += 1;
-                        expSet.add(j.UniqueGeneName)
-                    }
-                    else if((j.AnnotationStatus === "UNKNOWN") && !(unkSet.has(j.UniqueGeneName)) && geneSet.has(j.UniqueGeneName) ){
-                        final[i][2].value += 1;
-                        unkSet.add(j.UniqueGeneName)
-                    }
-                    else if((j.AnnotationStatus === "OTHER") && !(otherSet.has(j.UniqueGeneName)) && geneSet.has(j.UniqueGeneName)){
-                        final[i][1].value += 1;
-                        otherSet.add(j.UniqueGeneName)
-                    }
-                    //else if(j.EvidenceCode === 'TAS'|| j.EvidenceCode === 'IC' || j.EvidenceCode === 'NAS' || j.EvidenceCode === 'IEA' ){}
-                    else if (!(unanSet.has(j.UniqueGeneName)) && geneSet.has(j.UniqueGeneName)) {
-                        console.log((j.EvidenceCode));
-                        final[i][3].value += 1;
-                        unanSet.add(j.UniqueGeneName)
+
+                if(getGeneId(j) !== null){
+                    let id = getGeneId(j);
+                    if(j.Aspect === i ){
+                        if(j.AnnotationStatus === "EXP" ){
+                            final[i][0].value += 1;
+                            expSet.add(id);
+
+                        }
+                        else if(j.AnnotationStatus === "UNKNOWN" ){
+                            final[i][2].value += 1;
+                            unkSet.add(id);
+                        }
+                        else if(j.AnnotationStatus === "OTHER"){
+                            final[i][1].value += 1;
+                            otherSet.add(id);
+                        }
+                        else {
+                            final[i][3].value += 1;
+                            unanSet.add(id)
+                        }
                     }
                 }
             }
-            //console.log(expSet)
-
         }
         return final;
     }
@@ -294,4 +298,24 @@ function validateStrategy(maybeStrategy: string): Strategy {
         throw new Errors.BadRequestError("strategy must be either 'union' or 'intersection'");
     }
     return maybeStrategy;
+}
+
+/**
+ * Helper function to parse out gene_ID
+ * @param {IAnnotation} annotation
+ * @param {IAnnotation} annotation
+ * @returns {string}
+ */
+
+function getGeneId(annotation: IAnnotation): string {
+    let geneID;
+    for(let i of annotation.AlternativeGeneName){
+        if (i in geneMap){
+            geneID = i
+        }
+        else{
+            geneID = null
+        }
+    }
+    return geneID;
 }

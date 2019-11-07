@@ -85,11 +85,12 @@ export const parse_annotations = (input: string): IAnnotation[] => {
 };
 
 const evidenceCodeToAnnotationStatus = (evidenceCode: string): AnnotationStatus => {
-    if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) {
+   if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) {
         return "EXP";
     } else if (evidenceCodes.UNKNOWN.includes(evidenceCode)) {
         return "UNKNOWN";
-    } else {
+    }
+    else {
         return "OTHER";
     }
 };
