@@ -1,6 +1,7 @@
 import parse from "csv-parse/lib/sync";
 import { readFileSync } from "fs";
 import {evidenceCodes} from "../config";
+import {resolve} from "path";
 
 const ANNOTATION_COLUMNS = [
     null,
@@ -51,8 +52,7 @@ export interface IGene {
     GeneProductType: string;
 }
 
-const GENE_NAME_REGEX = /^AT\dG\d{5}$/.compile();
-export const parse_annotations = (input: string): IAnnotation[] => {
+export const parseAnnotations = (input: string): IAnnotation[] => {
     return parse(input, {
         columns: ANNOTATION_COLUMNS,
         skip_empty_lines: true,
@@ -65,14 +65,6 @@ export const parse_annotations = (input: string): IAnnotation[] => {
                 return value.split("|");
             } else if (context.column === "Date") {
                 return new Date(Date.parse(`${value.slice(0,4)}-${value.slice(4,6)}-${value.slice(6,8)}`));
-            } else if (context.column === "UniqueGeneName") {
-                if (!GENE_NAME_REGEX.test(value)) {
-                    // Parser never enters this block.
-                    // Makes me think that the parser is reading the correct value but
-                    // assigning them to the wrong key in the record.
-                    return null;
-                }
-                return value;
             } else {
                 return value;
             }
@@ -89,13 +81,12 @@ const evidenceCodeToAnnotationStatus = (evidenceCode: string): AnnotationStatus 
         return "EXP";
     } else if (evidenceCodes.UNKNOWN.includes(evidenceCode)) {
         return "UNKNOWN";
-    }
-    else {
+    } else {
         return "OTHER";
     }
 };
 
-export const parse_genes = (input: string): IGene[] => {
+export const parseGenes = (input: string): IGene[] => {
     return parse(input, {
         columns: GENE_COLUMNS,
         skip_empty_lines: true,
@@ -106,14 +97,64 @@ export const parse_genes = (input: string): IGene[] => {
     });
 };
 
-export const read_annotations = (filename: string) => {
+export const readAnnotations = (filename: string) => {
     const buffer = readFileSync(filename).toString();
     const trimmed = buffer.slice(buffer.indexOf("\n"));
-    return parse_annotations(trimmed);
+    return parseAnnotations(trimmed);
 };
 
-export const read_genes = (filename: string) => {
+export const readGenes = (filename: string) => {
     const buffer = readFileSync(filename).toString();
     const trimmed = buffer.slice(buffer.indexOf("\n"));
-    return parse_genes(trimmed);
+    return parseGenes(trimmed);
+};
+
+export interface IngestConfig {
+    genesFile: string;
+    annotationsFile: string;
+}
+
+const defaultConfig: IngestConfig = {
+    genesFile: process.env["GENES_FILE"] || resolve("src/assets/gene-types.txt"),
+    annotationsFile: process.env["ANNOTATIONS_FILE"] || resolve("src/assets/gene_association.tair"),
+};
+
+export type GroupedAnnotations<T> = { [key in Aspect]: { [key in AnnotationStatus]: T } };
+export const makeGroupedAnnotations = <T>(initial: () => T): GroupedAnnotations<T> => ({
+    P: { EXP: initial(), OTHER: initial(), UNKNOWN: initial(), UNANNOTATED: initial() },
+    F: { EXP: initial(), OTHER: initial(), UNKNOWN: initial(), UNANNOTATED: initial() },
+    C: { EXP: initial(), OTHER: initial(), UNKNOWN: initial(), UNANNOTATED: initial() },
+});
+
+export type GeneMap = { [key: string]: IGene };
+
+export interface IngestedData {
+    geneMap: GeneMap;
+    annotations: IAnnotation[];
+    groupedAnnotations: GroupedAnnotations<Set<IGene>>;
+}
+
+export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData => {
+    const config: IngestConfig = { ...defaultConfig, ...userConfig };
+
+    const genesArray = readGenes(config.genesFile);
+    const geneMap: { [key: string]: IGene } = genesArray
+        .reduce((acc, current) => {
+            acc[current.GeneID] = current;
+            return acc;
+        }, {});
+
+    // TODO fix parsing so that headers aren't included to start with
+    delete geneMap["name"]; // Get rid of "name" header
+
+    const annotations = readAnnotations(config.annotationsFile);
+    const groupedAnnotations = annotations.reduce((acc, annotation) => {
+        const aspect = annotation.Aspect;
+        const annotationStatus = annotation.AnnotationStatus;
+        const geneId = annotation.AlternativeGeneName.find(name => !!geneMap[name]);
+        if (geneId) acc[aspect][annotationStatus].add(geneMap[geneId]);
+        return acc;
+    }, makeGroupedAnnotations<Set<IGene>>(() => new Set()));
+
+    return { geneMap, annotations, groupedAnnotations };
 };
