@@ -1,6 +1,7 @@
 import {readFileSync} from "fs";
 import {resolve} from "path";
-import {Errors, GET, Path, QueryParam} from "typescript-rest";
+import {Errors, GET, Path, QueryParam, Return} from "typescript-rest";
+import {queryAnnotated, QueryOption, Segment, Strategy} from "../../queries/queries";
 import {
   AnnotationStatus,
   Aspect,
@@ -8,7 +9,7 @@ import {
   makeAnnotationIndex, StructuredData,
   UnstructuredText
 } from "../../utils/ingest";
-import {queryAnnotated, QueryOption, Segment, Strategy} from "../../queries/queries";
+import {annotationsToGAF, genesToCSV} from '../../utils/exporters';
 
 // TODO use data fetcher rather than files.
 console.log("Begin reading data");
@@ -40,6 +41,8 @@ export class V1Service {
      * match). The default value is "union".
      */
     @QueryParam("strategy") maybeStrategy: string = "union",
+    @QueryParam("asGAF") asGAF: string | null = null,
+    @QueryParam("asGeneCSV") asGeneCSV: string | null = null
   ) {
     // Validate all of the filter query params. This throws a 400 if any are formatted incorrectly.
     const segments: Segment[] = (maybeFilters || []).map(validateSegments);
@@ -57,7 +60,16 @@ export class V1Service {
     // TODO include unannotated genes
     const [queriedGenes, queriedAnnotations] = queryAnnotated(dataset, query);
 
-    return {annotatedGenes: queriedGenes, annotations: queriedAnnotations, unannotatedGenes: []};
+    // TODO include unannotated genes
+    if (asGAF) {
+      var fileContents = Buffer.from(annotationsToGAF(queriedAnnotations, {segments: segments.map(f => `${f.aspect}-${f.annotationStatus}`).join(", ")}));
+      return new Return.DownloadBinaryData(fileContents, "application/csv", "gene-association.csv");
+    } else if (asGeneCSV) {
+      var fileContents = Buffer.from(genesToCSV(Object.values(queriedGenes).map(v => v.gene), {filters: segments.map(f => `${f.aspect}-${f.annotationStatus}`).join(", ")}));
+      return new Return.DownloadBinaryData(fileContents, "application/csv", "gene-types.txt");
+    } else {
+      return {annotatedGenes: queriedGenes, annotations: queriedAnnotations, unannotatedGenes: []};
+    }
   }
 
   @Path("/wgs_segments")

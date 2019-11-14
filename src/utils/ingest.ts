@@ -1,6 +1,31 @@
 import parse from "csv-parse/lib/sync";
 import {evidenceCodes} from "../config";
 
+export const ANNOTATION_COLUMNS = [
+    "IDC_1",
+    "DatabaseID",
+    "IDC_2",
+    "Invert",
+    "GOTerm",
+    "Reference",
+    "EvidenceCode",
+    "AdditionalEvidence",
+    "Aspect",
+    "UniqueGeneName",
+    "AlternativeGeneName",
+    "GeneProductType",
+    "IDC_3",
+    "Date",
+    "AssignedBy",
+    "IDC_3",
+    "IDC_4",
+];
+
+export const GENE_COLUMNS = [
+    "GeneID",
+    "GeneProductType",
+];
+
 /**
  * Each Annotation may belong to one of the following three Aspects:
  *
