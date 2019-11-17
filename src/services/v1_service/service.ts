@@ -1,12 +1,14 @@
 import {Errors, GET, Path, QueryParam} from "typescript-rest";
-import {AnnotationStatus, Aspect, IAnnotation, IGene, read_annotations, read_genes} from "../../utils/ingest";
+import {
+    AnnotationStatus,
+    Aspect,
+    GeneMap,
+    IAnnotation,
+    makeGroupedAnnotations,
+    readData,
+} from "../../utils/ingest";
 
-const annotations = read_annotations(process.env["ANNOTATIONS_FILE"] || "../../assets/gene_association.tair");
-const genes = read_genes(process.env["GENES_FILE"] || "../../assets/gene-types.txt");
-const geneMap: { [key: string]: IGene } = genes.reduce((acc, current) => {
-    acc[current.GeneID] = current;
-    return acc;
-}, {});
+const { geneMap, annotations, groupedAnnotations } = readData();
 
 /**
  * A Selector is a function which checks whether the filters
@@ -50,20 +52,35 @@ export class V1Service {
         const getSelector = (filters: IFilter[]) => (pred: (IFilter) => boolean) =>
             (strategy === "union") ? filters.some(pred) : filters.every(pred);
 
-        const annotatedFilters = allFilters.filter(({ annotation_status }) => annotation_status !== "UNANNOTATED");
-        const unannotatedFilters = allFilters.filter(({ annotation_status }) => annotation_status === "UNANNOTATED");
+        const annotatedFilters = allFilters.filter(({annotation_status}) => annotation_status !== "UNANNOTATED");
+        const unannotatedFilters = allFilters.filter(({annotation_status}) => annotation_status === "UNANNOTATED");
 
-        let [annotatedGenes, annotations]: [IGene[], IAnnotation[]] = [[], []];
+        let [annotatedGenes, annotations]: [GeneMap, IAnnotation[]] = [{}, []];
         if (annotatedFilters.length > 0) {
             [annotatedGenes, annotations] = queryAnnotated(getSelector(annotatedFilters))
         }
 
-        let unannotatedGenes: IGene[] = [];
+        let unannotatedGenes: GeneMap = {};
         if (unannotatedFilters.length > 0) {
             unannotatedGenes = queryUnannotated(getSelector(unannotatedFilters));
         }
 
-        return { annotatedGenes, annotations, unannotatedGenes };
+        return {annotatedGenes, annotations, unannotatedGenes};
+    }
+
+    @Path("/wgs_segments")
+    @GET
+    get_wgs() {
+        const totalGeneCount = Object.keys(geneMap).length;
+        return Object.entries(groupedAnnotations).reduce((acc, [aspect, statuses]) => {
+            let countInAspect = 0;
+            for (const [status, genes] of Object.entries(statuses)) {
+                countInAspect += genes.size;
+                acc[aspect][status] = genes.size;
+            }
+            acc[aspect]["UNANNOTATED"] = totalGeneCount - countInAspect;
+            return acc;
+        }, makeGroupedAnnotations(() => 0));
     }
 }
 
@@ -73,26 +90,25 @@ export class V1Service {
  *
  * @param selector A function which applies the filters as a union or intersection.
  */
-const queryAnnotated = (selector: Selector): [IGene[], IAnnotation[]] => {
+const queryAnnotated = (selector: Selector): [GeneMap, IAnnotation[]] => {
     const queriedAnnotations =
         annotations.filter((item: IAnnotation) =>
-            selector(({ aspect, annotation_status }: IFilter) =>
+            selector(({aspect, annotation_status}: IFilter) =>
                 item.Aspect === aspect &&
                 item.AnnotationStatus === annotation_status
             ));
 
-    const queriedGeneNames = Array.from(
-        new Set(queriedAnnotations
-            .map(annotation => ([annotation.UniqueGeneName, ...annotation.AlternativeGeneName]))
-            .reduce((acc, current) => {
-                acc.push(...current);
-                return acc;
-            }, []))
+    const queriedGeneNames = new Set(
+        queriedAnnotations.flatMap(annotation => annotation.AlternativeGeneName)
     );
 
-    const queriedGenes = queriedGeneNames
-        .map(name => geneMap[name])
-        .filter(gene => !!gene);
+    const queriedGenes = Object.entries(geneMap)
+        .filter(([geneId, _]) => queriedGeneNames.has(geneId))
+        .reduce((acc, [geneId, gene]) => {
+            acc[geneId] = gene;
+            return acc;
+        }, {});
+
     return [queriedGenes, queriedAnnotations];
 };
 
@@ -102,20 +118,25 @@ const queryAnnotated = (selector: Selector): [IGene[], IAnnotation[]] => {
  *
  * @param selector A function which applies the filters as a union or intersection.
  */
-const queryUnannotated = (selector: Selector): IGene[] => {
+const queryUnannotated = (selector: Selector): GeneMap => {
 
-    const queriedAnnotations =
-        annotations.filter((item: IAnnotation) =>
-            selector(({ aspect }: IFilter) => item.Aspect === aspect ));
+    const queriedAnnotations = annotations.filter((item: IAnnotation) =>
+        selector(({aspect}: IFilter) => item.Aspect === aspect)
+    );
 
-    const annotatedGeneNames = new Set(queriedAnnotations
-        .map(annotation => annotation.AlternativeGeneName)
-        .reduce((acc, current) => {
-            acc.push(...current);
+    const annotatedGeneNames = new Set(
+        queriedAnnotations
+            .flatMap(annotation => annotation.AlternativeGeneName)
+    );
+
+    return Object.entries(geneMap)
+        // Take only the gene entries which don't exist in the annotatedGeneNames
+        .filter(([geneId, _]) => !annotatedGeneNames.has(geneId))
+        // Reassemble the (geneId, gene) array into an object
+        .reduce((acc, [geneId, gene]) => {
+            acc[geneId] = gene;
             return acc;
-    }, []));
-
-    return genes.filter(gene => !annotatedGeneNames.has(gene.GeneID));
+        }, {});
 };
 
 /**
@@ -174,7 +195,7 @@ function validateFilter(maybeFilter: string): IFilter {
         throw new Errors.BadRequestError("the Annotation Status given in a filter must be exactly 'EXP', 'OTHER', 'UNKNOWN', or 'UNANNOTATED'");
     }
 
-    return { aspect, annotation_status };
+    return {aspect, annotation_status};
 }
 
 /**

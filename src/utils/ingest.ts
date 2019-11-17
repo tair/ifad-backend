@@ -1,7 +1,7 @@
 import parse from "csv-parse/lib/sync";
 import { readFileSync } from "fs";
 import {evidenceCodes} from "../config";
-import {Errors} from "typescript-rest";
+import {resolve} from "path";
 
 const ANNOTATION_COLUMNS = [
     null,
@@ -52,8 +52,7 @@ export interface IGene {
     GeneProductType: string;
 }
 
-const GENE_NAME_REGEX = /^AT\dG\d{5}$/.compile();
-export const parse_annotations = (input: string): IAnnotation[] => {
+export const parseAnnotations = (input: string): IAnnotation[] => {
     return parse(input, {
         columns: ANNOTATION_COLUMNS,
         skip_empty_lines: true,
@@ -66,14 +65,6 @@ export const parse_annotations = (input: string): IAnnotation[] => {
                 return value.split("|");
             } else if (context.column === "Date") {
                 return new Date(Date.parse(`${value.slice(0,4)}-${value.slice(4,6)}-${value.slice(6,8)}`));
-            } else if (context.column === "UniqueGeneName") {
-                if (!GENE_NAME_REGEX.test(value)) {
-                    // Parser never enters this block.
-                    // Makes me think that the parser is reading the correct value but
-                    // assigning them to the wrong key in the record.
-                    return null;
-                }
-                return value;
             } else {
                 return value;
             }
@@ -86,7 +77,7 @@ export const parse_annotations = (input: string): IAnnotation[] => {
 };
 
 const evidenceCodeToAnnotationStatus = (evidenceCode: string): AnnotationStatus => {
-    if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) {
+   if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) {
         return "EXP";
     } else if (evidenceCodes.UNKNOWN.includes(evidenceCode)) {
         return "UNKNOWN";
@@ -95,7 +86,7 @@ const evidenceCodeToAnnotationStatus = (evidenceCode: string): AnnotationStatus 
     }
 };
 
-export const parse_genes = (input: string): IGene[] => {
+export const parseGenes = (input: string): IGene[] => {
     return parse(input, {
         columns: GENE_COLUMNS,
         skip_empty_lines: true,
@@ -106,14 +97,111 @@ export const parse_genes = (input: string): IGene[] => {
     });
 };
 
-export const read_annotations = (filename: string) => {
+export const readAnnotations = (filename: string) => {
     const buffer = readFileSync(filename).toString();
     const trimmed = buffer.slice(buffer.indexOf("\n"));
-    return parse_annotations(trimmed);
+    return parseAnnotations(trimmed);
 };
 
-export const read_genes = (filename: string) => {
+export const readGenes = (filename: string) => {
     const buffer = readFileSync(filename).toString();
     const trimmed = buffer.slice(buffer.indexOf("\n"));
-    return parse_genes(trimmed);
+    return parseGenes(trimmed);
+};
+
+/**
+ * An IngestConfig contains the paths of files at which to read and parse data.
+ */
+export interface IngestConfig {
+    genesFile: string;
+    annotationsFile: string;
+}
+
+/**
+ * The default IngestConfig reads filenames from Environment Variables or defaults
+ * to the file paths given here.
+ */
+const defaultConfig: IngestConfig = {
+    genesFile: process.env["GENES_FILE"] || resolve("src/assets/gene-types.txt"),
+    annotationsFile: process.env["ANNOTATIONS_FILE"] || resolve("src/assets/gene_association.tair"),
+};
+
+/**
+ * A GroupedAnnotations object contains data which is grouped by the Aspect and the
+ * AnnotationStatus of a piece of data. This is generic over any type so that we can
+ * build structures of data which may represent different goals. For example, a
+ * GroupedAnnotation<Set<IGene>> can be used to organize sets of IGenes that belong to
+ * the given Aspect and AnnotationStatus, whereas a GroupedAnnotation<number> can be
+ * used to hold the count of how many genes belong to a given Aspect and AnnotationStatus.
+ */
+export type GroupedAnnotations<T> = { [key in Aspect]: { [key in AnnotationStatus]: T } };
+
+/**
+ * This function creates a GroupedAnnotations object which is initialized such that every
+ * key contains a specific initial value. This can be used to create a GroupedAnnotations
+ * which holds empty Sets or which has a 0-count.
+ *
+ * @param initial A function which produces an initial value to put at each key.
+ */
+export const makeGroupedAnnotations = <T>(initial: () => T): GroupedAnnotations<T> => ({
+    P: { EXP: initial(), OTHER: initial(), UNKNOWN: initial(), UNANNOTATED: initial() },
+    F: { EXP: initial(), OTHER: initial(), UNKNOWN: initial(), UNANNOTATED: initial() },
+    C: { EXP: initial(), OTHER: initial(), UNKNOWN: initial(), UNANNOTATED: initial() },
+});
+
+/**
+ * The GeneMap type is an object which is keyed by the names of IGenes and
+ * has values of the IGene which the key represents.
+ */
+export type GeneMap = { [key: string]: IGene };
+
+/**
+ * IngestedData is the data format which contains all parsed and cached data
+ * which was read from all of the data sources during the ingestion step.
+ */
+export interface IngestedData {
+    geneMap: GeneMap;
+    annotations: IAnnotation[];
+    groupedAnnotations: GroupedAnnotations<Set<IGene>>;
+}
+
+/**
+ * The easy top-level entrypoint for reading data needed for backend queries.
+ *
+ * This function takes an IngestConfig which describes the location for reading
+ * files with the data we're interested in. A default configuration is provided
+ * which reads these file paths from environment variables.
+ *
+ * This function returns an `IngestedData` object, which has the parsed data
+ * inside of it. The same data may be included in the IngestedData object multiple
+ * times if it is transformed or cached in various formats. For example, we have
+ * an array of all annotations, or a map in which the annotations are grouped by
+ * their aspect and annotation status.
+ *
+ * @param userConfig An optional configuration for specifying file locations.
+ * @return An IngestedData object with parsed and structured information.
+ */
+export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData => {
+    const config: IngestConfig = { ...defaultConfig, ...userConfig };
+
+    const genesArray = readGenes(config.genesFile);
+    const geneMap: { [key: string]: IGene } = genesArray
+        .reduce((acc, current) => {
+            acc[current.GeneID] = current;
+            return acc;
+        }, {});
+
+    // TODO fix parsing so that headers aren't included to start with
+    delete geneMap["name"]; // Get rid of "name" header
+
+    const annotations = readAnnotations(config.annotationsFile);
+    const groupedAnnotations = annotations.reduce((acc, annotation) => {
+        const aspect = annotation.Aspect;
+        const annotationStatus = annotation.AnnotationStatus;
+        const geneId = annotation.AlternativeGeneName.find(name => !!geneMap[name]);
+        if (geneId) acc[aspect][annotationStatus].add(geneMap[geneId]);
+        return acc;
+    }, makeGroupedAnnotations<Set<IGene>>(() => new Set()));
+
+    return { geneMap, annotations, groupedAnnotations };
 };
