@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+  ifad-backend:
+    image: nicholastmosher/ifad-backend:latest
+    container_name: "ifad"
+    environment:
+      GENES_FILE: "/ifad/files/gene-types.txt"
+      ANNOTATIONS_FILE: "/ifad/files/gene_association.tair"
+    ports:
+      - 80:3000
+    volumes:
+      - "./src/assets:/ifad/files"
