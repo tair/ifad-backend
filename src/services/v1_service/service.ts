@@ -1,12 +1,5 @@
 import {Errors, GET, Path, QueryParam} from "typescript-rest";
-import {
-    AnnotationStatus,
-    Aspect,
-    GeneMap,
-    IAnnotation,
-    makeGroupedAnnotations,
-    readData,
-} from "../../utils/ingest";
+import {AnnotationStatus, Aspect, GeneMap, IAnnotation, makeGroupedAnnotations, readData,} from "../../utils/ingest";
 
 const { geneMap, annotations, groupedAnnotations } = readData();
 
@@ -72,15 +65,19 @@ export class V1Service {
     @GET
     get_wgs() {
         const totalGeneCount = Object.keys(geneMap).length;
-        return Object.entries(groupedAnnotations).reduce((acc, [aspect, {all, status}]) => {
-            const countInAspect = all.size;
 
-            const unannotatedCount = totalGeneCount - countInAspect;
-            const knownCount = status.KNOWN_EXP.size + status.KNOWN_OTHER.size;
-
-            acc[aspect].UNANNOTATED = unannotatedCount;
+        const result = Object.entries(groupedAnnotations).reduce((acc, [aspect, {all, known: {all: known_all, exp, other }, unknown}]) => {
+            acc[aspect].all = all.size;
+            acc[aspect].known.all = known_all.size;
+            acc[aspect].known.exp = exp.size;
+            acc[aspect].known.other = other.size;
+            acc[aspect].unknown = unknown.size;
+            acc[aspect].unannotated = totalGeneCount - all.size;
             return acc;
         }, makeGroupedAnnotations(() => 0));
+
+        result["totalGenes"] = totalGeneCount;
+        return result;
     }
 }
 

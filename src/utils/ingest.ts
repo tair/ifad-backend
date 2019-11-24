@@ -80,13 +80,10 @@ const evidenceCodeToAnnotationStatus = (evidenceCode: string): AnnotationStatus 
     if (evidenceCodes.UNKNOWN.includes(evidenceCode)) {
         return "UNKNOWN";
     }
-
-    // TODO put all "KNOWN" genes into the same Set to start in order to eliminate duplication errors
     if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) {
         return "KNOWN_EXP";
-    } else {
-        return "KNOWN_OTHER";
     }
+    return "KNOWN_OTHER";
 };
 
 export const parseGenes = (input: string): IGene[] => {
@@ -140,8 +137,12 @@ const defaultConfig: IngestConfig = {
 export type GroupedAnnotations<T> = {
     [key in Aspect]: {
         all: T,
-        known: T,
         unknown: T,
+        known: {
+            all: T,
+            exp: T,
+            other: T,
+        },
     }
 };
 
@@ -153,9 +154,9 @@ export type GroupedAnnotations<T> = {
  * @param initial A function which produces an initial value to put at each key.
  */
 export const makeGroupedAnnotations = <T>(initial: () => T): GroupedAnnotations<T> => ({
-    P: { all: initial(), known: initial(), unknown: initial() },
-    F: { all: initial(), known: initial(), unknown: initial() },
-    C: { all: initial(), known: initial(), unknown: initial() },
+    P: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
+    F: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
+    C: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
 });
 
 /**
@@ -216,7 +217,12 @@ export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData
             if (annotationStatus === "UNKNOWN") {
                 acc[aspect].unknown.add(gene);
             } else {
-                acc[aspect].known.add(gene);
+                acc[aspect].known.all.add(gene);
+                if (annotationStatus === "KNOWN_EXP") {
+                    acc[aspect].known.exp.add(gene);
+                } else if (annotationStatus === "KNOWN_OTHER") {
+                    acc[aspect].known.other.add(gene);
+                }
             }
             return acc;
         }, makeGroupedAnnotations<Set<IGene>>(() => new Set()));
