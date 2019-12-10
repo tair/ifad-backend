@@ -193,11 +193,15 @@ export interface IngestedData {
  */
 export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData => {
     const config: IngestConfig = { ...defaultConfig, ...userConfig };
+    console.log("Reading data using configs: " + JSON.stringify(config));
 
     const genesArray = readGenes(config.genesFile);
-    const geneMap: { [key: string]: IGene } = genesArray
+    const geneMap: GeneMap = genesArray
         .reduce((acc, current) => {
-            acc[current.GeneID] = current;
+            // TODO add filters for GeneProductType
+            // if (current.GeneProductType !== "pseudogene") {
+            //     acc[current.GeneID] = current;
+            // }
             return acc;
         }, {});
 
@@ -205,7 +209,9 @@ export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData
     delete geneMap["name"]; // Get rid of "name" header
 
     const annotations = readAnnotations(config.annotationsFile);
-    const groupedAnnotations: GroupedAnnotations<Set<IGene>> = annotations
+
+    // Group all annotations based on aspect, categorizing KNOWN_EXP but not KNOWN_OTHER
+    const tmpGroupedAnnotations: GroupedAnnotations<Set<IGene>> = annotations
         .reduce((acc, annotation) => {
             const aspect = annotation.Aspect;
             const annotationStatus = annotation.AnnotationStatus;
@@ -220,10 +226,16 @@ export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData
                 acc[aspect].known.all.add(gene);
                 if (annotationStatus === "KNOWN_EXP") {
                     acc[aspect].known.exp.add(gene);
-                } else if (annotationStatus === "KNOWN_OTHER") {
-                    acc[aspect].known.other.add(gene);
                 }
             }
+            return acc;
+        }, makeGroupedAnnotations<Set<IGene>>(() => new Set()));
+
+    // Calculate KNOWN_OTHER by finding all genes that are in "known" but not KNOWN_EXP
+    const groupedAnnotations = Object.entries(tmpGroupedAnnotations)
+        .reduce((acc, [aspect, {all, unknown, known: {all: known_all, exp}}]) => {
+            const other = new Set([...known_all].filter(gene => !exp.has(gene)));
+            acc[aspect] = { all, unknown, known: { all: known_all, exp, other }};
             return acc;
         }, makeGroupedAnnotations<Set<IGene>>(() => new Set()));
 
