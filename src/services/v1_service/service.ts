@@ -1,18 +1,8 @@
 import {Errors, GET, Path, QueryParam} from "typescript-rest";
-import {AnnotationStatus, Aspect, GeneMap, IAnnotation, makeGroupedAnnotations, readData,} from "../../utils/ingest";
+import {AnnotationStatus, Aspect, makeGroupedAnnotations, readData,} from "../../utils/ingest";
+import {queryAnnotated, QueryOption, Strategy} from "../../queries/queries";
 
 const { geneMap, annotations, groupedAnnotations } = readData();
-
-/**
- * A Selector is a function which checks whether the filters
- * from a query match a given gene or annotation which should
- * be included in a response.
- *
- * This is used to pick only those genes or annotations which
- * _all_ filters match the given set of filters (intersection),
- * or those for which at least one filter matches (union).
- */
-type Selector = (_: (filter: IFilter) => boolean) => boolean;
 
 @Path("/api/v1")
 export class V1Service {
@@ -36,29 +26,23 @@ export class V1Service {
         @QueryParam("strategy") maybeStrategy: string = "union",
     ) {
         // Validate all of the filter query params. This throws a 400 if any are formatted incorrectly.
-        const allFilters: IFilter[] = (maybeFilters || []).map(validateFilter);
+        const filters: IFilterParam[] = (maybeFilters || []).map(validateFilter);
 
-        // Validates the strategy query param string, which must be exactly "union" or "intersection".
-        const strategy: Strategy = validateStrategy(maybeStrategy);
+        let query: QueryOption;
 
-        // Create a selector which matches the union or intersection of filters.
-        const getSelector = (filters: IFilter[]) => (pred: (IFilter) => boolean) =>
-            (strategy === "union") ? filters.some(pred) : filters.every(pred);
+        if (filters.length === 0) {
+            query = { tag: "QueryGetAll" };
+        } else {
 
-        const annotatedFilters = allFilters.filter(({annotation_status}) => annotation_status !== "UNANNOTATED");
-        const unannotatedFilters = allFilters.filter(({annotation_status}) => annotation_status === "UNANNOTATED");
-
-        let [annotatedGenes, annotations]: [GeneMap, IAnnotation[]] = [{}, []];
-        if (annotatedFilters.length > 0) {
-            [annotatedGenes, annotations] = queryAnnotated(getSelector(annotatedFilters))
+            // Validates the strategy query param string, which must be exactly "union" or "intersection".
+            const strategy: Strategy = validateStrategy(maybeStrategy);
+            query = { tag: "QueryWith", strategy, filters };
         }
 
-        let unannotatedGenes: GeneMap = {};
-        if (unannotatedFilters.length > 0) {
-            unannotatedGenes = queryUnannotated(getSelector(unannotatedFilters));
-        }
+        // TODO include unannotated genes
+        const [queriedGenes, queriedAnnotations] = queryAnnotated(annotations, geneMap, query);
 
-        return {annotatedGenes, annotations, unannotatedGenes};
+        return {annotatedGenes: queriedGenes, annotations: queriedAnnotations, unannotatedGenes: []};
     }
 
     @Path("/wgs_segments")
@@ -82,65 +66,10 @@ export class V1Service {
 }
 
 /**
- * Given a selector over Annotated genes, return a subset of genes and a
- * subset of annotations which match the criteria.
- *
- * @param selector A function which applies the filters as a union or intersection.
- */
-const queryAnnotated = (selector: Selector): [GeneMap, IAnnotation[]] => {
-    const queriedAnnotations =
-        annotations.filter((item: IAnnotation) =>
-            selector(({aspect, annotation_status}: IFilter) =>
-                item.Aspect === aspect &&
-                item.AnnotationStatus === annotation_status
-            ));
-
-    const queriedGeneNames = new Set(
-        queriedAnnotations.flatMap(annotation => annotation.AlternativeGeneName)
-    );
-
-    const queriedGenes = Object.entries(geneMap)
-        .filter(([geneId, _]) => queriedGeneNames.has(geneId))
-        .reduce((acc, [geneId, gene]) => {
-            acc[geneId] = gene;
-            return acc;
-        }, {});
-
-    return [queriedGenes, queriedAnnotations];
-};
-
-/**
- * Given a selector over Unannotated genes, return a subset of genes which
- * match the filter criteria of the selector.
- *
- * @param selector A function which applies the filters as a union or intersection.
- */
-const queryUnannotated = (selector: Selector): GeneMap => {
-
-    const queriedAnnotations = annotations.filter((item: IAnnotation) =>
-        selector(({aspect}: IFilter) => item.Aspect === aspect)
-    );
-
-    const annotatedGeneNames = new Set(
-        queriedAnnotations
-            .flatMap(annotation => annotation.AlternativeGeneName)
-    );
-
-    return Object.entries(geneMap)
-        // Take only the gene entries which don't exist in the annotatedGeneNames
-        .filter(([geneId, _]) => !annotatedGeneNames.has(geneId))
-        // Reassemble the (geneId, gene) array into an object
-        .reduce((acc, [geneId, gene]) => {
-            acc[geneId] = gene;
-            return acc;
-        }, {});
-};
-
-/**
  * A Filter is used to match genes and annotations based on which Aspect
  * and Annotation Status they have.
  */
-interface IFilter {
+export interface IFilterParam {
     aspect: Aspect;
     annotation_status: AnnotationStatus;
 }
@@ -178,7 +107,7 @@ function validateAnnotationStatus(maybeStatus: string): maybeStatus is Annotatio
  *
  * @param maybeFilter The string which we are checking is a valid filter.
  */
-function validateFilter(maybeFilter: string): IFilter {
+function validateFilter(maybeFilter: string): IFilterParam {
     const parts = maybeFilter.split(",");
     if (parts.length !== 2) {
         throw new Errors.BadRequestError("each filter must have exactly two parts, an Aspect and an Annotation Status, separated by a comma");
@@ -194,13 +123,6 @@ function validateFilter(maybeFilter: string): IFilter {
 
     return {aspect, annotation_status};
 }
-
-/**
- * Whether to match genes and annotations when:
- *   At least on filter matches that gene or annotation (union)
- *   All filters match that gene or annotation (intersection)
- */
-type Strategy = "union" | "intersection";
 
 /**
  * Validates that a query string is a proper strategy, either

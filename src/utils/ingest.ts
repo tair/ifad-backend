@@ -37,7 +37,7 @@ export interface IAnnotation {
     GOTerm: string;
     Reference: string;
     EvidenceCode: string;
-    AdditionalEvidence: string;
+    AdditionalEvidence: string[];
     Aspect: Aspect;
     AnnotationStatus: AnnotationStatus;
     UniqueGeneName: string;
@@ -135,15 +135,15 @@ const defaultConfig: IngestConfig = {
  * used to hold the count of how many genes belong to a given Aspect and AnnotationStatus.
  */
 export type GroupedAnnotations<T> = {
-    [key in Aspect]: {
-        all: T,
-        unknown: T,
-        known: {
-            all: T,
-            exp: T,
-            other: T,
-        },
-    }
+  [key in Aspect]: {
+    all: T,
+    unknown: T,
+    known: {
+      all: T,
+      exp: T,
+      other: T,
+    },
+  }
 };
 
 /**
@@ -154,16 +154,21 @@ export type GroupedAnnotations<T> = {
  * @param initial A function which produces an initial value to put at each key.
  */
 export const makeGroupedAnnotations = <T>(initial: () => T): GroupedAnnotations<T> => ({
-    P: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
-    F: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
-    C: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
+  P: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
+  F: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
+  C: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
 });
 
 /**
  * The GeneMap type is an object which is keyed by the names of IGenes and
  * has values of the IGene which the key represents.
  */
-export type GeneMap = { [key: string]: IGene };
+export type GeneMap = {
+  [key: string]: {
+    gene: IGene,
+    annotations: Set<IAnnotation>,
+  }
+};
 
 /**
  * IngestedData is the data format which contains all parsed and cached data
@@ -198,10 +203,7 @@ export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData
     const genesArray = readGenes(config.genesFile);
     const geneMap: GeneMap = genesArray
         .reduce((acc, current) => {
-            // TODO add filters for GeneProductType
-            // if (current.GeneProductType !== "pseudogene") {
-            //     acc[current.GeneID] = current;
-            // }
+            acc[current.GeneID] = current;
             return acc;
         }, {});
 
@@ -218,7 +220,12 @@ export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData
             const geneId = annotation.AlternativeGeneName.find(name => !!geneMap[name]);
             if (!geneId) return acc;
 
-            const gene = geneMap[geneId];
+            const { gene, annotations } = geneMap[geneId];
+
+            // Add the current annotation to the list for the gene it belongs to.
+            annotations.add(annotation);
+
+            // Add gene to the proper index in GroupedAnnotations
             acc[aspect].all.add(gene);
             if (annotationStatus === "UNKNOWN") {
                 acc[aspect].unknown.add(gene);
@@ -233,10 +240,10 @@ export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData
 
     // Calculate KNOWN_OTHER by finding all genes that are in "known" but not KNOWN_EXP
     const groupedAnnotations = Object.entries(tmpGroupedAnnotations)
-        .reduce((acc, [aspect, {all, unknown, known: {all: known_all, exp}}]) => {
-            const other = new Set([...known_all].filter(gene => !exp.has(gene)));
-            acc[aspect] = { all, unknown, known: { all: known_all, exp, other }};
-            return acc;
+        .reduce((acc, [aspect, index]) => {
+              index.known.other = new Set([...index.known.all].filter(gene => !index.known.exp.has(gene)));
+              acc[aspect] = index;
+              return acc;
         }, makeGroupedAnnotations<Set<IGene>>(() => new Set()));
 
     return { geneMap, annotations, groupedAnnotations };
