@@ -1,6 +1,6 @@
 import {Errors, GET, Path, QueryParam} from "typescript-rest";
 import {AnnotationStatus, Aspect, makeGroupedAnnotations, readData,} from "../../utils/ingest";
-import {queryAnnotated, QueryOption, Strategy} from "../../queries/queries";
+import {queryAnnotated, QueryOption, Segment, Strategy} from "../../queries/queries";
 
 const { geneMap, annotations, groupedAnnotations } = readData();
 
@@ -26,17 +26,16 @@ export class V1Service {
         @QueryParam("strategy") maybeStrategy: string = "union",
     ) {
         // Validate all of the filter query params. This throws a 400 if any are formatted incorrectly.
-        const filters: IFilterParam[] = (maybeFilters || []).map(validateFilter);
+        const segments: Segment[] = (maybeFilters || []).map(validateSegments);
 
         let query: QueryOption;
-
-        if (filters.length === 0) {
+        if (segments.length === 0) {
             query = { tag: "QueryGetAll" };
         } else {
 
             // Validates the strategy query param string, which must be exactly "union" or "intersection".
             const strategy: Strategy = validateStrategy(maybeStrategy);
-            query = { tag: "QueryWith", strategy, filters };
+            query = { tag: "QueryWith", strategy, segments };
         }
 
         // TODO include unannotated genes
@@ -63,15 +62,6 @@ export class V1Service {
         result["totalGenes"] = totalGeneCount;
         return result;
     }
-}
-
-/**
- * A Filter is used to match genes and annotations based on which Aspect
- * and Annotation Status they have.
- */
-export interface IFilterParam {
-    aspect: Aspect;
-    annotation_status: AnnotationStatus;
 }
 
 /**
@@ -107,21 +97,21 @@ function validateAnnotationStatus(maybeStatus: string): maybeStatus is Annotatio
  *
  * @param maybeFilter The string which we are checking is a valid filter.
  */
-function validateFilter(maybeFilter: string): IFilterParam {
+function validateSegments(maybeFilter: string): Segment {
     const parts = maybeFilter.split(",");
     if (parts.length !== 2) {
         throw new Errors.BadRequestError("each filter must have exactly two parts, an Aspect and an Annotation Status, separated by a comma");
     }
 
-    const [aspect, annotation_status] = parts;
+    const [aspect, annotationStatus] = parts;
     if (!validateAspect(aspect)) {
         throw new Errors.BadRequestError("the Aspect given in a filter must be exactly 'P', 'C', or 'F'");
     }
-    if (!validateAnnotationStatus(annotation_status)) {
+    if (!validateAnnotationStatus(annotationStatus)) {
         throw new Errors.BadRequestError("the Annotation Status given in a filter must be exactly 'EXP', 'OTHER', 'UNKNOWN', or 'UNANNOTATED'");
     }
 
-    return {aspect, annotation_status};
+    return {aspect, annotationStatus};
 }
 
 /**
