@@ -1,25 +1,8 @@
 import {Errors, GET, Path, QueryParam} from "typescript-rest";
-import {
-    AnnotationStatus,
-    Aspect,
-    GeneMap,
-    IAnnotation,
-    makeGroupedAnnotations,
-    readData,
-} from "../../utils/ingest";
+import {AnnotationStatus, Aspect, makeGroupedAnnotations, readData,} from "../../utils/ingest";
+import {queryAnnotated, QueryOption, Segment, Strategy} from "../../queries/queries";
 
 const { geneMap, annotations, groupedAnnotations } = readData();
-
-/**
- * A Selector is a function which checks whether the filters
- * from a query match a given gene or annotation which should
- * be included in a response.
- *
- * This is used to pick only those genes or annotations which
- * _all_ filters match the given set of filters (intersection),
- * or those for which at least one filter matches (union).
- */
-type Selector = (_: (filter: IFilter) => boolean) => boolean;
 
 @Path("/api/v1")
 export class V1Service {
@@ -43,109 +26,42 @@ export class V1Service {
         @QueryParam("strategy") maybeStrategy: string = "union",
     ) {
         // Validate all of the filter query params. This throws a 400 if any are formatted incorrectly.
-        const allFilters: IFilter[] = (maybeFilters || []).map(validateFilter);
+        const segments: Segment[] = (maybeFilters || []).map(validateSegments);
 
-        // Validates the strategy query param string, which must be exactly "union" or "intersection".
-        const strategy: Strategy = validateStrategy(maybeStrategy);
+        let query: QueryOption;
+        if (segments.length === 0) {
+            query = { tag: "QueryGetAll" };
+        } else {
 
-        // Create a selector which matches the union or intersection of filters.
-        const getSelector = (filters: IFilter[]) => (pred: (IFilter) => boolean) =>
-            (strategy === "union") ? filters.some(pred) : filters.every(pred);
-
-        const annotatedFilters = allFilters.filter(({annotation_status}) => annotation_status !== "UNANNOTATED");
-        const unannotatedFilters = allFilters.filter(({annotation_status}) => annotation_status === "UNANNOTATED");
-
-        let [annotatedGenes, annotations]: [GeneMap, IAnnotation[]] = [{}, []];
-        if (annotatedFilters.length > 0) {
-            [annotatedGenes, annotations] = queryAnnotated(getSelector(annotatedFilters))
+            // Validates the strategy query param string, which must be exactly "union" or "intersection".
+            const strategy: Strategy = validateStrategy(maybeStrategy);
+            query = { tag: "QueryWith", strategy, segments };
         }
 
-        let unannotatedGenes: GeneMap = {};
-        if (unannotatedFilters.length > 0) {
-            unannotatedGenes = queryUnannotated(getSelector(unannotatedFilters));
-        }
+        // TODO include unannotated genes
+        const [queriedGenes, queriedAnnotations] = queryAnnotated(annotations, geneMap, query);
 
-        return {annotatedGenes, annotations, unannotatedGenes};
+        return {annotatedGenes: queriedGenes, annotations: queriedAnnotations, unannotatedGenes: []};
     }
 
     @Path("/wgs_segments")
     @GET
     get_wgs() {
         const totalGeneCount = Object.keys(geneMap).length;
-        return Object.entries(groupedAnnotations).reduce((acc, [aspect, statuses]) => {
-            let countInAspect = 0;
-            for (const [status, genes] of Object.entries(statuses)) {
-                countInAspect += genes.size;
-                acc[aspect][status] = genes.size;
-            }
-            acc[aspect]["UNANNOTATED"] = totalGeneCount - countInAspect;
+
+        const result = Object.entries(groupedAnnotations).reduce((acc, [aspect, {all, known: {all: known_all, exp, other }, unknown}]) => {
+            acc[aspect].all = all.size;
+            acc[aspect].known.all = known_all.size;
+            acc[aspect].known.exp = exp.size;
+            acc[aspect].known.other = other.size;
+            acc[aspect].unknown = unknown.size;
+            acc[aspect].unannotated = totalGeneCount - all.size;
             return acc;
         }, makeGroupedAnnotations(() => 0));
+
+        result["totalGenes"] = totalGeneCount;
+        return result;
     }
-}
-
-/**
- * Given a selector over Annotated genes, return a subset of genes and a
- * subset of annotations which match the criteria.
- *
- * @param selector A function which applies the filters as a union or intersection.
- */
-const queryAnnotated = (selector: Selector): [GeneMap, IAnnotation[]] => {
-    const queriedAnnotations =
-        annotations.filter((item: IAnnotation) =>
-            selector(({aspect, annotation_status}: IFilter) =>
-                item.Aspect === aspect &&
-                item.AnnotationStatus === annotation_status
-            ));
-
-    const queriedGeneNames = new Set(
-        queriedAnnotations.flatMap(annotation => annotation.AlternativeGeneName)
-    );
-
-    const queriedGenes = Object.entries(geneMap)
-        .filter(([geneId, _]) => queriedGeneNames.has(geneId))
-        .reduce((acc, [geneId, gene]) => {
-            acc[geneId] = gene;
-            return acc;
-        }, {});
-
-    return [queriedGenes, queriedAnnotations];
-};
-
-/**
- * Given a selector over Unannotated genes, return a subset of genes which
- * match the filter criteria of the selector.
- *
- * @param selector A function which applies the filters as a union or intersection.
- */
-const queryUnannotated = (selector: Selector): GeneMap => {
-
-    const queriedAnnotations = annotations.filter((item: IAnnotation) =>
-        selector(({aspect}: IFilter) => item.Aspect === aspect)
-    );
-
-    const annotatedGeneNames = new Set(
-        queriedAnnotations
-            .flatMap(annotation => annotation.AlternativeGeneName)
-    );
-
-    return Object.entries(geneMap)
-        // Take only the gene entries which don't exist in the annotatedGeneNames
-        .filter(([geneId, _]) => !annotatedGeneNames.has(geneId))
-        // Reassemble the (geneId, gene) array into an object
-        .reduce((acc, [geneId, gene]) => {
-            acc[geneId] = gene;
-            return acc;
-        }, {});
-};
-
-/**
- * A Filter is used to match genes and annotations based on which Aspect
- * and Annotation Status they have.
- */
-interface IFilter {
-    aspect: Aspect;
-    annotation_status: AnnotationStatus;
 }
 
 /**
@@ -181,29 +97,22 @@ function validateAnnotationStatus(maybeStatus: string): maybeStatus is Annotatio
  *
  * @param maybeFilter The string which we are checking is a valid filter.
  */
-function validateFilter(maybeFilter: string): IFilter {
+function validateSegments(maybeFilter: string): Segment {
     const parts = maybeFilter.split(",");
     if (parts.length !== 2) {
         throw new Errors.BadRequestError("each filter must have exactly two parts, an Aspect and an Annotation Status, separated by a comma");
     }
 
-    const [aspect, annotation_status] = parts;
+    const [aspect, annotationStatus] = parts;
     if (!validateAspect(aspect)) {
         throw new Errors.BadRequestError("the Aspect given in a filter must be exactly 'P', 'C', or 'F'");
     }
-    if (!validateAnnotationStatus(annotation_status)) {
+    if (!validateAnnotationStatus(annotationStatus)) {
         throw new Errors.BadRequestError("the Annotation Status given in a filter must be exactly 'EXP', 'OTHER', 'UNKNOWN', or 'UNANNOTATED'");
     }
 
-    return {aspect, annotation_status};
+    return {aspect, annotationStatus};
 }
-
-/**
- * Whether to match genes and annotations when:
- *   At least on filter matches that gene or annotation (union)
- *   All filters match that gene or annotation (intersection)
- */
-type Strategy = "union" | "intersection";
 
 /**
  * Validates that a query string is a proper strategy, either

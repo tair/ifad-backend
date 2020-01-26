@@ -29,7 +29,7 @@ const GENE_COLUMNS = [
 ];
 
 export type Aspect = "F" | "P" | "C";
-export type AnnotationStatus = "EXP" | "OTHER" | "UNKNOWN" | "UNANNOTATED";
+export type AnnotationStatus = "KNOWN_EXP" | "KNOWN_OTHER" | "UNKNOWN" | "UNANNOTATED";
 
 export interface IAnnotation {
     DatabaseID: string;
@@ -37,7 +37,7 @@ export interface IAnnotation {
     GOTerm: string;
     Reference: string;
     EvidenceCode: string;
-    AdditionalEvidence: string;
+    AdditionalEvidence: string[];
     Aspect: Aspect;
     AnnotationStatus: AnnotationStatus;
     UniqueGeneName: string;
@@ -77,13 +77,13 @@ export const parseAnnotations = (input: string): IAnnotation[] => {
 };
 
 const evidenceCodeToAnnotationStatus = (evidenceCode: string): AnnotationStatus => {
-   if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) {
-        return "EXP";
-    } else if (evidenceCodes.UNKNOWN.includes(evidenceCode)) {
+    if (evidenceCodes.UNKNOWN.includes(evidenceCode)) {
         return "UNKNOWN";
-    } else {
-        return "OTHER";
     }
+    if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) {
+        return "KNOWN_EXP";
+    }
+    return "KNOWN_OTHER";
 };
 
 export const parseGenes = (input: string): IGene[] => {
@@ -134,7 +134,17 @@ const defaultConfig: IngestConfig = {
  * the given Aspect and AnnotationStatus, whereas a GroupedAnnotation<number> can be
  * used to hold the count of how many genes belong to a given Aspect and AnnotationStatus.
  */
-export type GroupedAnnotations<T> = { [key in Aspect]: { [key in AnnotationStatus]: T } };
+export type GroupedAnnotations<T> = {
+  [key in Aspect]: {
+    all: T,
+    unknown: T,
+    known: {
+      all: T,
+      exp: T,
+      other: T,
+    },
+  }
+};
 
 /**
  * This function creates a GroupedAnnotations object which is initialized such that every
@@ -144,16 +154,21 @@ export type GroupedAnnotations<T> = { [key in Aspect]: { [key in AnnotationStatu
  * @param initial A function which produces an initial value to put at each key.
  */
 export const makeGroupedAnnotations = <T>(initial: () => T): GroupedAnnotations<T> => ({
-    P: { EXP: initial(), OTHER: initial(), UNKNOWN: initial(), UNANNOTATED: initial() },
-    F: { EXP: initial(), OTHER: initial(), UNKNOWN: initial(), UNANNOTATED: initial() },
-    C: { EXP: initial(), OTHER: initial(), UNKNOWN: initial(), UNANNOTATED: initial() },
+  P: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
+  F: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
+  C: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
 });
 
 /**
  * The GeneMap type is an object which is keyed by the names of IGenes and
  * has values of the IGene which the key represents.
  */
-export type GeneMap = { [key: string]: IGene };
+export type GeneMap = {
+  [key: string]: {
+    gene: IGene,
+    annotations: Set<IAnnotation>,
+  }
+};
 
 /**
  * IngestedData is the data format which contains all parsed and cached data
@@ -183,9 +198,10 @@ export interface IngestedData {
  */
 export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData => {
     const config: IngestConfig = { ...defaultConfig, ...userConfig };
+    console.log("Reading data using configs: " + JSON.stringify(config));
 
     const genesArray = readGenes(config.genesFile);
-    const geneMap: { [key: string]: IGene } = genesArray
+    const geneMap: GeneMap = genesArray
         .reduce((acc, current) => {
             acc[current.GeneID] = current;
             return acc;
@@ -195,13 +211,40 @@ export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData
     delete geneMap["name"]; // Get rid of "name" header
 
     const annotations = readAnnotations(config.annotationsFile);
-    const groupedAnnotations = annotations.reduce((acc, annotation) => {
-        const aspect = annotation.Aspect;
-        const annotationStatus = annotation.AnnotationStatus;
-        const geneId = annotation.AlternativeGeneName.find(name => !!geneMap[name]);
-        if (geneId) acc[aspect][annotationStatus].add(geneMap[geneId]);
-        return acc;
-    }, makeGroupedAnnotations<Set<IGene>>(() => new Set()));
+
+    // Group all annotations based on aspect, categorizing KNOWN_EXP but not KNOWN_OTHER
+    const tmpGroupedAnnotations: GroupedAnnotations<Set<IGene>> = annotations
+        .reduce((acc, annotation) => {
+            const aspect = annotation.Aspect;
+            const annotationStatus = annotation.AnnotationStatus;
+            const geneId = annotation.AlternativeGeneName.find(name => !!geneMap[name]);
+            if (!geneId) return acc;
+
+            const { gene, annotations } = geneMap[geneId];
+
+            // Add the current annotation to the list for the gene it belongs to.
+            annotations.add(annotation);
+
+            // Add gene to the proper index in GroupedAnnotations
+            acc[aspect].all.add(gene);
+            if (annotationStatus === "UNKNOWN") {
+                acc[aspect].unknown.add(gene);
+            } else {
+                acc[aspect].known.all.add(gene);
+                if (annotationStatus === "KNOWN_EXP") {
+                    acc[aspect].known.exp.add(gene);
+                }
+            }
+            return acc;
+        }, makeGroupedAnnotations<Set<IGene>>(() => new Set()));
+
+    // Calculate KNOWN_OTHER by finding all genes that are in "known" but not KNOWN_EXP
+    const groupedAnnotations = Object.entries(tmpGroupedAnnotations)
+        .reduce((acc, [aspect, index]) => {
+              index.known.other = new Set([...index.known.all].filter(gene => !index.known.exp.has(gene)));
+              acc[aspect] = index;
+              return acc;
+        }, makeGroupedAnnotations<Set<IGene>>(() => new Set()));
 
     return { geneMap, annotations, groupedAnnotations };
 };
