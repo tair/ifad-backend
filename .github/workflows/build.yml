@@ -21,4 +21,4 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Deploy new image onto AWS instance
-      run: "ssh-add <(cat << EOF\n${{ secrets.AWS_DEVELOPMENT_KEY }}\nEOF) && ssh ec2-user@${{ secrets.AWS_DEVELOPMENT_HOST }} \"cd ifad-backend;docker-compose pull && docker-compose up && date >> success.txt\""
+      run: "(cat << EOF\n${{ secrets.AWS_DEVELOPMENT_KEY }}\nEOF) > key.pem && chmod 400 key.pem && ssh -i key.pem ec2-user@${{ secrets.AWS_DEVELOPMENT_HOST }} \"cd ifad-backend;docker-compose pull && docker-compose up && date >> success.txt\""
