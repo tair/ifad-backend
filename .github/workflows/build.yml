@@ -9,10 +9,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    
+
     - name: Build and test backend
       run: "yarn && yarn test"
-      
+
     - name: Build docker container and push
       uses: elgohr/Publish-Docker-Github-Action@2.7
       with:
@@ -21,4 +21,4 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Deploy new image onto AWS instance
-      run: "ssh-add <(echo ${{ secrets.AWS_DEVELOPMENT_KEY }}) && ssh ec2-user@${{ secrets.AWS_DEVELOPMENT_HOST }} \"cd ifad-backend;docker-compose pull && docker-compose up && date >> success.txt\""
+      run: "ssh-add <(cat << EOF\n${{ secrets.AWS_DEVELOPMENT_KEY }}\nEOF) && ssh ec2-user@${{ secrets.AWS_DEVELOPMENT_HOST }} \"cd ifad-backend;docker-compose pull && docker-compose up && date >> success.txt\""
