@@ -203,7 +203,10 @@ export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData
     const genesArray = readGenes(config.genesFile);
     const geneMap: GeneMap = genesArray
         .reduce((acc, current) => {
-            acc[current.GeneID] = current;
+            acc[current.GeneID] = {
+                gene: current,
+                annotations: new Set<IAnnotation>(),
+            };
             return acc;
         }, {});
 
