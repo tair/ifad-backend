@@ -8,6 +8,8 @@ services:
     environment:
       GENES_FILE: "/ifad/files/gene-types.txt"
       ANNOTATIONS_FILE: "/ifad/files/tair.gaf"
+      UPDATE_INTERVAL: 86400000
+      UPDATE_AT_MIDNIGHT: true
     ports:
       - 80:3000
     volumes:

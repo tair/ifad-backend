@@ -1,27 +1,9 @@
-import {readFileSync} from "fs";
-import {resolve} from "path";
 import {Errors, GET, Path, QueryParam, Return, ContextResponse} from "typescript-rest";
-import {GeneProductTypeFilter, Query, queryDataset, QueryOption, Segment, Strategy} from "../queries";
-import {
-  AnnotationStatus,
-  Aspect,
-  ingestData,
-  makeAnnotationIndex,
-  StructuredData,
-  UnstructuredText
-} from "../ingest";
+import {AnnotationStatus, Aspect, makeAnnotationIndex} from "../ingest";
+import {QueryOption, Segment, Strategy} from "../queries";
 import {annotationsToGAF, genesToCSV, buildGenesMetadata, buildAnnotationMetadata} from '../export';
+import { getDataset } from '../data_fetcher';
 import express from "express";
-
-// TODO use data fetcher rather than files.
-console.log("Begin reading data");
-const genesText = readFileSync(process.env["GENES_FILE"] || resolve("assets/gene-types.txt")).toString();
-const annotationsText = readFileSync(process.env["ANNOTATIONS_FILE"] || resolve("assets/tair.gaf")).toString();
-const unstructuredText: UnstructuredText = {genesText, annotationsText};
-const maybeDataset = ingestData(unstructuredText);
-if (!maybeDataset) throw new Error("failed to parse data");
-const dataset: StructuredData = maybeDataset;
-console.log("Finished parsing data");
 
 type Format = "gaf" | "gene-csv" | "json";
 
@@ -81,8 +63,15 @@ export class V1Service {
       segments_meta.strategy = strategy;
     }
 
-    const query: Query = { filter, option: option };
-    const queriedDataset = queryDataset(dataset, query);
+    const dataset = getDataset();
+
+    // TODO include unannotated genes
+    const queriedDataset = queryAnnotated(dataset, query);
+
+    // TODO include unannotated genes
+    const format = validateFormat(maybeFormat);
+
+    const filters_meta = {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")};
 
     switch (format) {
       case "gaf":
@@ -111,17 +100,9 @@ export class V1Service {
 
   @Path("/wgs_segments")
   @GET
-  get_wgs(
-    /**
-     * ?filter=""
-     * This filter describes which subset of Genes will be used for querying.
-     * The option for filter are "all" | "include_protein" | "exclude_pseudogene".
-     */
-    @QueryParam("filter") maybeFilter: string = "exclude_pseudogene",
-  ) {
-    const filter = validateFilter(maybeFilter);
-    const query: Query = { filter, option: {tag: "QueryGetAll"} };
-    let queryResult = queryDataset(dataset, query);
+  get_wgs() {
+    const dataset = getDataset();
+    const totalGeneCount = Object.keys(dataset.genes.index).length;
 
     const totalGeneCount = Object.keys(queryResult.genes.index).length;
     const result = Object.entries(queryResult.annotations.index)

@@ -4,6 +4,17 @@ import {V1Service} from "./services/v1";
 import {resolve} from "path";
 import cors from "cors";
 import compression from "compression";
+import { updateData, startPeriodicallyCalling, getTomorrowMorning } from './data_fetcher';
+
+updateData();
+const default_interval: string = (1000 * 60 * 60 * 24).toString();
+const interval: string = process.env["UPDATE_INTERVAL"] || default_interval;
+const update_at_midnight: string = process.env["UPDATE_AT_MIDNIGHT"] || 'true';
+if (update_at_midnight === "true") {
+    startPeriodicallyCalling(updateData, parseInt(interval), getTomorrowMorning());
+} else {
+    startPeriodicallyCalling(updateData, parseInt(interval));
+}
 
 const app = express();
 app.use(cors());
