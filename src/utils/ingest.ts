@@ -52,8 +52,14 @@ export interface IGene {
     GeneProductType: string;
 }
 
-export const parseAnnotations = (input: string): IAnnotation[] => {
-    return parse(input, {
+export const parseAnnotationsData = (input: string): IAnnotation[] => {
+  const evidenceCodeToAnnotationStatus = (evidenceCode: string): AnnotationStatus => {
+    if (evidenceCodes.UNKNOWN.includes(evidenceCode)) return "UNKNOWN";
+    if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) return "KNOWN_EXP";
+    return "KNOWN_OTHER";
+  };
+
+  return parse(input, {
         columns: ANNOTATION_COLUMNS,
         skip_empty_lines: true,
         delimiter: "\t",
@@ -76,16 +82,6 @@ export const parseAnnotations = (input: string): IAnnotation[] => {
     }));
 };
 
-const evidenceCodeToAnnotationStatus = (evidenceCode: string): AnnotationStatus => {
-    if (evidenceCodes.UNKNOWN.includes(evidenceCode)) {
-        return "UNKNOWN";
-    }
-    if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) {
-        return "KNOWN_EXP";
-    }
-    return "KNOWN_OTHER";
-};
-
 export const parseGenes = (input: string): IGene[] => {
     return parse(input, {
         columns: GENE_COLUMNS,
@@ -97,10 +93,75 @@ export const parseGenes = (input: string): IGene[] => {
     });
 };
 
-export const readAnnotations = (filename: string) => {
-    const buffer = readFileSync(filename).toString();
-    const trimmed = buffer.slice(buffer.indexOf("\n"));
-    return parseAnnotations(trimmed);
+type Metadata = string;
+
+type AnnotationData = {
+  metadata: Metadata,
+  annotations: IAnnotation[],
+};
+
+/**
+ * Splits an Annotations file into the metadata header and the rest of the body.
+ *
+ * Given the following file contents, we would want the capture groups to look
+ * like the following:
+ *
+ *         //// BEGIN tair.gaf
+ *    (1   !gaf-version: 2.1
+ *         !Some metadata here
+ *         !More metadata
+ *         !
+ *         !Last updated Jan 1)
+ *    (2   TAIR   locus:XXXXX   ENO1 ...
+ *         TAIR   locus:XXXXX   ENO1 ...)
+ *         //// END tair.gaf
+ *
+ * Regex Explanation:
+ *
+ * ^ ... $ match entire file
+ *
+ * (?:       BEGIN capture group for metadata
+ * \s*       match any whitespace
+ * (:?         BEGIN match a line starting with !
+ * ![^\n]*     match ! and all characters until next newline
+ * )?          END match a line starting with !. Optional for blank lines
+ * \n)*      END capture group for metadata. Repeat as many times as possible
+ *
+ * (.*)      the rest of the file that does not match metadata lines becomes the body
+ */
+const metadataRegex = /^((?:\s*(?:![^\n]*)?\n)*)(.*$)/s;
+
+/**
+ * Given the text of an annotations file (e.g. tair.gaf), split the contents of the
+ * file into "metadata" and "annotationsText".
+ *
+ * The "metadata" string includes all lines from the beginning of the file until the
+ * first line which does not begin with "!". The "annotationsText" string includes
+ * all of the remaining text from the original string.
+ *
+ * @param body The body of the original annotations input file.
+ */
+export const splitAnnotationsText = (body: string) => {
+  const matches = body.match(metadataRegex);
+  if (!matches) return null;
+  if (matches.length < 3) return null;
+  const metadata = matches[1];
+  const annotationsText = matches[2];
+  return { metadata, annotationsText };
+};
+
+/**
+ * Given the text of the annotations data (without the metadata from the file),
+ * parse the data and return it in a structured format.
+ *
+ * @param body The text of the raw annotations data.
+ */
+export const parseAnnotationsText = (body: string): AnnotationData | null => {
+    const splitText = splitAnnotationsText(body);
+    if (!splitText) return null;
+    const { metadata, annotationsText } = splitText;
+    const annotations = parseAnnotationsData(annotationsText);
+    return { metadata, annotations };
 };
 
 export const readGenes = (filename: string) => {
@@ -175,6 +236,7 @@ export type GeneMap = {
  * which was read from all of the data sources during the ingestion step.
  */
 export interface IngestedData {
+    metadata: Metadata,
     geneMap: GeneMap;
     annotations: IAnnotation[];
     groupedAnnotations: GroupedAnnotations<Set<IGene>>;
@@ -196,7 +258,7 @@ export interface IngestedData {
  * @param userConfig An optional configuration for specifying file locations.
  * @return An IngestedData object with parsed and structured information.
  */
-export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData => {
+export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData | null => {
     const config: IngestConfig = { ...defaultConfig, ...userConfig };
     console.log("Reading data using configs: " + JSON.stringify(config));
 
@@ -213,7 +275,9 @@ export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData
     // TODO fix parsing so that headers aren't included to start with
     delete geneMap["name"]; // Get rid of "name" header
 
-    const annotations = readAnnotations(config.annotationsFile);
+    const maybeAnnotationData = parseAnnotationsText(config.annotationsFile);
+    if (!maybeAnnotationData) return null;
+    const { metadata, annotations } = maybeAnnotationData;
 
     // Group all annotations based on aspect, categorizing KNOWN_EXP but not KNOWN_OTHER
     const tmpGroupedAnnotations: GroupedAnnotations<Set<IGene>> = annotations
@@ -249,5 +313,5 @@ export const readData = (userConfig: IngestConfig = defaultConfig): IngestedData
               return acc;
         }, makeGroupedAnnotations<Set<IGene>>(() => new Set()));
 
-    return { geneMap, annotations, groupedAnnotations };
+    return { metadata, geneMap, annotations, groupedAnnotations };
 };
