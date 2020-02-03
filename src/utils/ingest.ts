@@ -1,29 +1,36 @@
 import parse from "csv-parse/lib/sync";
 import {evidenceCodes} from "../config";
 
+/**
+ * Indicate which columns in the GAF file will be mapped to what fields on the Annotation object.
+ * Null indicates that we don't care about the column, but it's needed to select the right column number.
+ */
 export const ANNOTATION_COLUMNS = [
-    "IDC_1",
-    "DatabaseID",
-    "IDC_2",
-    "Invert",
-    "GOTerm",
-    "Reference",
-    "EvidenceCode",
-    "AdditionalEvidence",
-    "Aspect",
-    "UniqueGeneName",
-    "AlternativeGeneName",
-    "GeneProductType",
-    "IDC_3",
-    "Date",
-    "AssignedBy",
-    "IDC_3",
-    "IDC_4",
+  null,
+  "DatabaseID",
+  null,
+  "Invert",
+  "GOTerm",
+  "Reference",
+  "EvidenceCode",
+  "AdditionalEvidence",
+  "Aspect",
+  "UniqueGeneName",
+  "AlternativeGeneName",
+  "GeneProductType",
+  null,
+  "Date",
+  "AssignedBy",
+  null,
+  null,
 ];
 
+/**
+ * Similar to ANNOTATION_COLUMNS, this indicates which columns in the gene file map to which object attributes.
+ */
 export const GENE_COLUMNS = [
-    "GeneID",
-    "GeneProductType",
+  "GeneID",
+  "GeneProductType"
 ];
 
 /**
@@ -82,11 +89,6 @@ export const parseAnnotationsData = (input: string): Annotation[] | null => {
     return "KNOWN_OTHER";
   };
 
-  const ANNOTATION_COLUMNS = [
-    null, "DatabaseID", null, "Invert", "GOTerm", "Reference", "EvidenceCode", "AdditionalEvidence", "Aspect",
-    "UniqueGeneName", "AlternativeGeneName", "GeneProductType", null, "Date", "AssignedBy", null, null,
-  ];
-
   return parse(input, {
     columns: ANNOTATION_COLUMNS,
     skip_empty_lines: true,
@@ -126,7 +128,6 @@ export type Gene = {
  * @param input The raw genes text to be parsed.
  */
 export const parseGenesData = (input: string): Gene[] | null => {
-  const GENE_COLUMNS = ["GeneID", "GeneProductType"];
 
   return parse(input, {
     columns: GENE_COLUMNS,

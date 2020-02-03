@@ -72,11 +72,11 @@ export class V1Service {
     const format = validateFormat(maybeFormat);
     switch (format) {
       case "gaf":
-        const gafFile = Buffer.from(annotationsToGAF(queriedAnnotations, {segments: segments.map(f => `${f.aspect}-${f.annotationStatus}`).join(", ")}));
-        return new Return.DownloadBinaryData(gafFile, "application/csv", "gene-association.csv");
+        const gafFile = Buffer.from(annotationsToGAF(dataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")}));
+        return new Return.DownloadBinaryData(gafFile,"application/csv", "gene-association.csv");
       case "gene-csv":
-        const csvFile = Buffer.from(genesToCSV(Object.values(queriedGenes).map(v => v.gene), {filters: segments.map(f => `${f.aspect}-${f.annotationStatus}`).join(", ")}));
-        return new Return.DownloadBinaryData(csvFile, "application/csv", "gene-types.txt");
+        const csvFile = Buffer.from(genesToCSV(dataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")}));
+        return new Return.DownloadBinaryData(csvFile,"application/csv", "gene-types.txt");
       case "json":
         return {annotatedGenes: queriedGenes, annotations: queriedAnnotations, unannotatedGenes: []};
     }

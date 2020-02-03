@@ -1,5 +1,5 @@
-import { Annotation, ANNOTATION_COLUMNS, GENE_COLUMNS, Gene } from './ingest';
-import json2csv, { parse } from "json2csv";
+import json2csv, { parse as serialize } from "json2csv";
+import { Annotation, ANNOTATION_COLUMNS, Gene, GENE_COLUMNS, StructuredData } from './ingest';
 
 const column_modifiers: Map<string|null, json2csv.FieldInfo<Annotation>> = new Map([
     [null, {
@@ -20,33 +20,36 @@ const column_modifiers: Map<string|null, json2csv.FieldInfo<Annotation>> = new M
     }]
 ])
 
-export function annotationsToGAF(annotations: Annotation[], headers: {[key: string]: string} = {}){
-    headers = {
-        ...headers,
-        "gaf-version": "2.0"
-    };
+const metadataSerializer = (metadata: {[key: string]: string}) => Object.entries(metadata)
+  .map((([key, value]) => `!${key}: ${value}`))
+  .reduce((accum, curr) => `${accum}\n${curr}`, "");
 
-    const parsed = parse(annotations, {
+export function annotationsToGAF(data: StructuredData, additionalMetadata: {[key: string]: string} = {}){
+    const serialized = serialize(data.annotations.records, {
         fields: ANNOTATION_COLUMNS.map(col=>column_modifiers.get(col) || col as string),
         header: false,
         defaultValue: "",
-        excelStrings: true
+        excelStrings: false
     });
 
-    const joinedHeader = Object.entries(headers).map(([header, value]) => `!${header}: ${value}`, "").join("\n");
-    
-    return joinedHeader.concat("\n",parsed);
+    const header = Object.keys(additionalMetadata).length>0 ? 
+      `${data.annotations.metadata}\n${metadataSerializer(additionalMetadata)}` : 
+      data.annotations.metadata
+
+    return header.concat("\n",serialized);
 }
 
-export function genesToCSV(genes: Gene[], headers: {[key: string]: string} = {}){
-    const parsed = parse(genes, {
+export function genesToCSV(data: StructuredData, additionalMetadata: {[key: string]: string} = {}){
+    const serialized = serialize(Object.values(data.genes.index).map(val=>val.gene), {
         fields: GENE_COLUMNS,
         header: false,
         defaultValue: "",
-        excelStrings: true
+        excelStrings: false
     });
 
-    const joinedHeader = Object.entries(headers).map(([header, value]) => `!${header}: ${value}`, "").join("\n");
-    
-    return joinedHeader.concat("\n",parsed);
+    const header = Object.keys(additionalMetadata).length>0 ? 
+      `${data.annotations.metadata}\n${metadataSerializer(additionalMetadata)}` : 
+      data.annotations.metadata
+
+    return header.concat("\n",serialized);
 }
