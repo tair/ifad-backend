@@ -33,7 +33,7 @@ export function annotationsToGAF(data: StructuredData, additionalMetadata: {[key
     });
 
     const header = Object.keys(additionalMetadata).length>0 ? 
-      `${data.annotations.metadata}\n${metadataSerializer(additionalMetadata)}` : 
+      `${data.annotations.metadata.trim()}\n${metadataSerializer(additionalMetadata).trim()}` : 
       data.annotations.metadata
 
     return header.concat("\n",serialized);
@@ -48,7 +48,7 @@ export function genesToCSV(data: StructuredData, additionalMetadata: {[key: stri
     });
 
     const header = Object.keys(additionalMetadata).length>0 ? 
-      `${data.genes.metadata}\n${metadataSerializer(additionalMetadata)}` : 
+      `${data.genes.metadata.trim()}\n${metadataSerializer(additionalMetadata).trim()}` : 
       data.annotations.metadata
 
     return header.concat("\n",serialized);
