@@ -1,6 +1,6 @@
-import {GeneMap, IAnnotation} from "../../utils/ingest";
+import {GeneIndex, Annotation, StructuredData, indexAnnotations} from "../../utils/ingest";
 
-export const geneMap: GeneMap = {
+const geneIndex: GeneIndex = {
   AT4G18120: {
     gene: {
       GeneID: "AT4G18120",
@@ -228,13 +228,23 @@ export const geneMap: GeneMap = {
   },
 };
 
-export const annotations: IAnnotation[] = Object.entries(geneMap)
+const annotationRecords: Annotation[] = Object.entries(geneIndex)
   .flatMap(([_, value]) => [...value.annotations]);
+
+export const structuredData: StructuredData = {
+  raw: { genesText: "", annotationsText: "" },
+  annotations: {
+    metadata: "",
+    records: annotationRecords,
+    index: indexAnnotations(geneIndex, annotationRecords),
+  },
+  geneIndex,
+};
 
 describe("the test data", () => {
   it("should have the same number of annotations in the GeneMap and the annotations list", () => {
-    const annotationCountInGeneMap = Object.values(geneMap)
+    const annotationCountInGeneMap = Object.values(geneIndex)
       .flatMap(value => value.annotations).length;
-    expect(annotationCountInGeneMap).toEqual(annotations.length);
+    expect(annotationCountInGeneMap).toEqual(annotationRecords.length);
   });
 });
