@@ -48,7 +48,7 @@ export function genesToCSV(data: StructuredData, additionalMetadata: {[key: stri
     });
 
     const header = Object.keys(additionalMetadata).length>0 ? 
-      `${data.annotations.metadata}\n${metadataSerializer(additionalMetadata)}` : 
+      `${data.genes.metadata}\n${metadataSerializer(additionalMetadata)}` : 
       data.annotations.metadata
 
     return header.concat("\n",serialized);

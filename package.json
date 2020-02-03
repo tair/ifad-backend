@@ -29,7 +29,7 @@
   },
   "scripts": {
     "start": "ts-node -r dotenv/config src/index.ts",
-    "dev": "ts-node-dev --inspect -r dotenv/config --no-notify src/index.ts",
+    "dev": "ts-node-dev -r dotenv/config --no-notify src/index.ts",
     "build": "tsc",
     "test": "jest"
   }
