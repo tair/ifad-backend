@@ -279,7 +279,7 @@ export const makeAnnotationIndex = <T>(initial: () => T): AnnotationIndex<T> => 
  * @param annotationData The parsed annotation data.
  */
 export const indexAnnotations = (
-  geneIndex: GeneIndex, 
+  geneIndex: GeneIndex,
   annotationData: Annotation[]
 ): AnnotationIndex<Set<Gene>> => {
 
@@ -371,5 +371,5 @@ export const ingestData = (raw: UnstructuredText): StructuredData | null => {
   };
 
   // Return all structured data
-  return { geneIndex, annotations, raw };
+  return {geneIndex, annotations, raw};
 };
