@@ -1,5 +1,5 @@
 import {Errors, GET, Path, QueryParam} from "typescript-rest";
-import {AnnotationStatus, Aspect, makeGroupedAnnotations, readData,} from "../../utils/ingest";
+import {AnnotationStatus, Aspect, makeAnnotationIndex, readData,} from "../../utils/ingest";
 import {queryAnnotated, QueryOption, Segment, Strategy} from "../../queries/queries";
 
 const { geneMap, annotations, groupedAnnotations } = readData();
@@ -57,7 +57,7 @@ export class V1Service {
             acc[aspect].unknown = unknown.size;
             acc[aspect].unannotated = totalGeneCount - all.size;
             return acc;
-        }, makeGroupedAnnotations(() => 0));
+        }, makeAnnotationIndex(() => 0));
 
         result["totalGenes"] = totalGeneCount;
         return result;

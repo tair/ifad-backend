@@ -1,6 +1,6 @@
-import {GeneMap, IAnnotation} from "../../utils/ingest";
+import {GeneIndex, Annotation} from "../../utils/ingest";
 
-export const geneMap: GeneMap = {
+export const geneMap: GeneIndex = {
   AT4G18120: {
     gene: {
       GeneID: "AT4G18120",
@@ -228,7 +228,7 @@ export const geneMap: GeneMap = {
   },
 };
 
-export const annotations: IAnnotation[] = Object.entries(geneMap)
+export const annotations: Annotation[] = Object.entries(geneMap)
   .flatMap(([_, value]) => [...value.annotations]);
 
 describe("the test data", () => {

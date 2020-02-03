@@ -1,4 +1,4 @@
-import {AnnotationStatus, Aspect, GeneMap, IAnnotation} from "../utils/ingest";
+import {AnnotationStatus, Aspect, GeneIndex, Annotation} from "../utils/ingest";
 
 /**
  * A Segment describes exactly one Aspect and one AnnotationStatus.
@@ -41,10 +41,10 @@ export type QueryWith = {
  * return the subset of Genes and Annotations represented by the query.
  */
 export const queryAnnotated = (
-  annotations: IAnnotation[],
-  geneMap: GeneMap,
+  annotations: Annotation[],
+  geneMap: GeneIndex,
   query: QueryOption,
-): [GeneMap, IAnnotation[]] => {
+): [GeneIndex, Annotation[]] => {
 
   switch (query.tag) {
     // When no segments are provided in the query, we simply return all annotations
@@ -85,9 +85,9 @@ export const queryAnnotated = (
  * @param geneMap The active dataset of genes to query over.
  */
 const queryAll = (
-  annotations: IAnnotation[],
-  geneMap: GeneMap,
-): [GeneMap, IAnnotation[]] => {
+  annotations: Annotation[],
+  geneMap: GeneIndex,
+): [GeneIndex, Annotation[]] => {
 
   // Construct a list of all gene names in all annotations.
   const geneNamesInAnnotations = new Set(
@@ -116,12 +116,12 @@ const queryAll = (
  * all genes that belong to the union of those segments.
  */
 const queryWithUnion = (
-  annotations: IAnnotation[],
-  geneMap: GeneMap,
+  annotations: Annotation[],
+  geneMap: GeneIndex,
   segments: Segment[],
-): [GeneMap, IAnnotation[]] => {
+): [GeneIndex, Annotation[]] => {
 
-  const queriedAnnotations = annotations.filter((item: IAnnotation) => {
+  const queriedAnnotations = annotations.filter((item: Annotation) => {
     return segments.some(filter =>
       filter.aspect === item.Aspect &&
       filter.annotationStatus === item.AnnotationStatus
@@ -152,10 +152,10 @@ const queryWithUnion = (
  * all genes that belong to the intersection of those segments.
  */
 const queryWithIntersection = (
-  annotations: IAnnotation[],
-  geneMap: GeneMap,
+  annotations: Annotation[],
+  geneMap: GeneIndex,
   segments: Segment[],
-): [GeneMap, IAnnotation[]] => {
+): [GeneIndex, Annotation[]] => {
   const queriedGeneMap = Object.entries(geneMap)
     .filter(([_, { annotations }]) => {
 
@@ -189,10 +189,10 @@ const queryWithIntersection = (
  * @param filter
  */
 export const queryUnannotated = (
-  annotations: IAnnotation[],
-  geneMap: GeneMap,
+  annotations: Annotation[],
+  geneMap: GeneIndex,
   filter: QueryOption,
-): GeneMap => {
+): GeneIndex => {
 
   switch (filter.tag) {
     case "QueryGetAll":

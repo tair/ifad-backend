@@ -1,4 +1,4 @@
-import {parseAnnotationsData, parseGenes, splitAnnotationsText} from "../ingest";
+import {parseAnnotationsData, parseGenesData, splitAnnotationsText} from "../ingest";
 
 const gene_data = `
 AT1G01010	protein_coding
@@ -33,11 +33,11 @@ describe("Ingestion functions", () => {
     });
 
     it("should parse a set of Gene IDs and Gene Product Types", () => {
-        expect(parseGenes(gene_data)).toMatchSnapshot();
+        expect(parseGenesData(gene_data)).toMatchSnapshot();
     });
 
     it("should not fail if the input text is empty", () => {
-        expect(() => parseGenes("")).not.toThrow();
+        expect(() => parseGenesData("")).not.toThrow();
     });
 });
 
@@ -87,7 +87,7 @@ TAIR	locus:2143266	TRM1b		GO:0000049	TAIR:AnalysisReference:501756968	IEA	UniPro
 
     const result = splitAnnotationsText(raw_annotation_text);
     if (!result) fail("test data should split correctly");
-    const { metadata, annotationsText } = result;
+    const { metadataText, annotationsText } = result;
 
     const expected_metadata = `!gaf-version: 2.1
 !
@@ -114,7 +114,7 @@ TAIR	locus:2143266	TRM1b		GO:0000049	TAIR:AnalysisReference:501756968	IEA	UniPro
 !Documentation about this header can be found here: https://github.com/geneontology/go-site/blob/master/docs/gaf_validation.md
 !
 `;
-    expect(metadata).toEqual(expected_metadata);
+    expect(metadataText).toEqual(expected_metadata);
 
     const expected_annotations = `DB	DB Object ID	DB Object Symbol	Qualifier	GO ID	DB:Reference (JDB:Reference)	Evidence Code	With (or) From	Aspect	DB Object Name	DB Object Type	Taxon	Date	Assigned By	Annotation Extension	Gene Product Form ID
 TAIR	locus:2031476	ENO1		GO:0000015	TAIR:AnalysisReference:501756966	IEA	InterPro:IPR000941	C	AT1G74030	AT1G74030|ENO1|enolase 1|F2P9.10|F2P9_10	protein	taxon:3702	20190907	InterPro		TAIR:locus:2031476
@@ -159,7 +159,7 @@ TAIR	locus:2032970	AT1G25260		GO:0000027	TAIR:AnalysisReference:501756966	IEA	In
 
     const result = splitAnnotationsText(raw_annotation_text);
     if (!result) fail("test data should split correctly");
-    const { metadata, annotationsText } = result;
+    const { metadataText, annotationsText } = result;
 
     const expected_metadata = `
 
@@ -177,7 +177,7 @@ TAIR	locus:2032970	AT1G25260		GO:0000027	TAIR:AnalysisReference:501756966	IEA	In
 
 `;
 
-    expect(metadata).toEqual(expected_metadata);
+    expect(metadataText).toEqual(expected_metadata);
 
     const expected_annotations = `DB	DB Object ID	DB Object Symbol	Qualifier	GO ID	DB:Reference (JDB:Reference)	Evidence Code	With (or) From	Aspect	DB Object Name	DB Object Type	Taxon	Date	Assigned By	Annotation Extension	Gene Product Form ID
 TAIR	locus:2031476	ENO1		GO:0000015	TAIR:AnalysisReference:501756966	IEA	InterPro:IPR000941	C	AT1G74030	AT1G74030|ENO1|enolase 1|F2P9.10|F2P9_10	protein	taxon:3702	20190907	InterPro		TAIR:locus:2031476
