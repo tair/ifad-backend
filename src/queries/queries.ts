@@ -91,7 +91,7 @@ const queryAll = (dataset: StructuredData): [GeneIndex, Annotation[]] => {
   );
 
   // Group all of the genes that appear in the annotations list.
-  const queriedGenes = Object.entries(dataset.geneIndex)
+  const queriedGenes = Object.entries(dataset.genes.index)
     .filter(([geneId, _]) => geneNamesInAnnotations.has(geneId))
     .reduce((acc, [geneId, gene]) => {
       acc[geneId] = gene;
@@ -127,7 +127,7 @@ const queryWithUnion = (
     queriedAnnotations.flatMap(a => [a.UniqueGeneName, ...a.AlternativeGeneName])
   );
 
-  const queriedGenes = Object.entries(dataset.geneIndex)
+  const queriedGenes = Object.entries(dataset.genes.index)
     .filter(([geneId, _]) => geneNamesInAnnotations.has(geneId))
     .reduce((acc, [geneId, gene]) => {
       acc[geneId] = gene;
@@ -149,7 +149,7 @@ const queryWithIntersection = (
   dataset: StructuredData,
   segments: Segment[],
 ): [GeneIndex, Annotation[]] => {
-  const queriedGeneMap = Object.entries(dataset.geneIndex)
+  const queriedGeneMap = Object.entries(dataset.genes.index)
     .filter(([_, { annotations }]) => {
 
       const gene_annotations = [...annotations];

@@ -14,7 +14,7 @@ import {queryAnnotated, QueryOption, Segment, Strategy} from "../../queries/quer
 console.log("Begin reading data");
 const genesText = readFileSync(resolve("src/assets/gene-types.txt")).toString();
 const annotationsText = readFileSync(resolve("src/assets/gene_association.tair")).toString();
-const unstructuredText: UnstructuredText = { genesText, annotationsText };
+const unstructuredText: UnstructuredText = {genesText, annotationsText};
 const maybeDataset = ingestData(unstructuredText);
 if (!maybeDataset) throw new Error("failed to parse data");
 const dataset: StructuredData = maybeDataset;
@@ -23,62 +23,62 @@ console.log("Finished parsing data");
 @Path("/api/v1")
 export class V1Service {
 
-    @Path("/genes")
-    @GET
-    genes(
-        /**
-         * ?filter[]
-         * This query is used to generate a selection of genes and annotations
-         * according to which Aspect and Annotation Status they belong to.
-         */
-        @QueryParam("filter") maybeFilters: string[],
-        /**
-         * ?strategy
-         * This query parameter is used to choose whether genes and annotations
-         * are selected using a "union" strategy (where at least one filter must
-         * match) or using an "intersection" strategy (where all filters must
-         * match). The default value is "union".
-         */
-        @QueryParam("strategy") maybeStrategy: string = "union",
-    ) {
-        // Validate all of the filter query params. This throws a 400 if any are formatted incorrectly.
-        const segments: Segment[] = (maybeFilters || []).map(validateSegments);
+  @Path("/genes")
+  @GET
+  genes(
+    /**
+     * ?filter[]
+     * This query is used to generate a selection of genes and annotations
+     * according to which Aspect and Annotation Status they belong to.
+     */
+    @QueryParam("filter") maybeFilters: string[],
+    /**
+     * ?strategy
+     * This query parameter is used to choose whether genes and annotations
+     * are selected using a "union" strategy (where at least one filter must
+     * match) or using an "intersection" strategy (where all filters must
+     * match). The default value is "union".
+     */
+    @QueryParam("strategy") maybeStrategy: string = "union",
+  ) {
+    // Validate all of the filter query params. This throws a 400 if any are formatted incorrectly.
+    const segments: Segment[] = (maybeFilters || []).map(validateSegments);
 
-        let query: QueryOption;
-        if (segments.length === 0) {
-            query = { tag: "QueryGetAll" };
-        } else {
+    let query: QueryOption;
+    if (segments.length === 0) {
+      query = {tag: "QueryGetAll"};
+    } else {
 
-            // Validates the strategy query param string, which must be exactly "union" or "intersection".
-            const strategy: Strategy = validateStrategy(maybeStrategy);
-            query = { tag: "QueryWith", strategy, segments };
-        }
-
-        // TODO include unannotated genes
-        const [queriedGenes, queriedAnnotations] = queryAnnotated(dataset, query);
-
-        return {annotatedGenes: queriedGenes, annotations: queriedAnnotations, unannotatedGenes: []};
+      // Validates the strategy query param string, which must be exactly "union" or "intersection".
+      const strategy: Strategy = validateStrategy(maybeStrategy);
+      query = {tag: "QueryWith", strategy, segments};
     }
 
-    @Path("/wgs_segments")
-    @GET
-    get_wgs() {
-      const totalGeneCount = Object.keys(dataset.geneIndex).length;
+    // TODO include unannotated genes
+    const [queriedGenes, queriedAnnotations] = queryAnnotated(dataset, query);
 
-      const result = Object.entries(dataset.annotations.index)
-        .reduce((acc, [aspect, {all, known: {all: known_all, exp, other }, unknown}]) => {
-          acc[aspect].all = all.size;
-          acc[aspect].known.all = known_all.size;
-          acc[aspect].known.exp = exp.size;
-          acc[aspect].known.other = other.size;
-          acc[aspect].unknown = unknown.size;
-          acc[aspect].unannotated = totalGeneCount - all.size;
-          return acc;
+    return {annotatedGenes: queriedGenes, annotations: queriedAnnotations, unannotatedGenes: []};
+  }
+
+  @Path("/wgs_segments")
+  @GET
+  get_wgs() {
+    const totalGeneCount = Object.keys(dataset.genes.index).length;
+
+    const result = Object.entries(dataset.annotations.index)
+      .reduce((acc, [aspect, {all, known: {all: known_all, exp, other}, unknown}]) => {
+        acc[aspect].all = all.size;
+        acc[aspect].known.all = known_all.size;
+        acc[aspect].known.exp = exp.size;
+        acc[aspect].known.other = other.size;
+        acc[aspect].unknown = unknown.size;
+        acc[aspect].unannotated = totalGeneCount - all.size;
+        return acc;
       }, makeAnnotationIndex(() => 0));
 
-      result["totalGenes"] = totalGeneCount;
-      return result;
-    }
+    result["totalGenes"] = totalGeneCount;
+    return result;
+  }
 }
 
 /**
@@ -86,7 +86,7 @@ export class V1Service {
  * @param maybeAspect The aspect query string being checked.
  */
 function validateAspect(maybeAspect: string): maybeAspect is Aspect {
-    return maybeAspect === "F" || maybeAspect === "C" || maybeAspect === "P";
+  return maybeAspect === "F" || maybeAspect === "C" || maybeAspect === "P";
 }
 
 /**
@@ -96,10 +96,10 @@ function validateAspect(maybeAspect: string): maybeAspect is Aspect {
  * @param maybeStatus
  */
 function validateAnnotationStatus(maybeStatus: string): maybeStatus is AnnotationStatus {
-    return maybeStatus === "EXP" ||
-        maybeStatus === "OTHER" ||
-        maybeStatus === "UNKNOWN" ||
-        maybeStatus === "UNANNOTATED";
+  return maybeStatus === "EXP" ||
+    maybeStatus === "OTHER" ||
+    maybeStatus === "UNKNOWN" ||
+    maybeStatus === "UNANNOTATED";
 }
 
 /**
@@ -115,20 +115,20 @@ function validateAnnotationStatus(maybeStatus: string): maybeStatus is Annotatio
  * @param maybeFilter The string which we are checking is a valid filter.
  */
 function validateSegments(maybeFilter: string): Segment {
-    const parts = maybeFilter.split(",");
-    if (parts.length !== 2) {
-        throw new Errors.BadRequestError("each filter must have exactly two parts, an Aspect and an Annotation Status, separated by a comma");
-    }
+  const parts = maybeFilter.split(",");
+  if (parts.length !== 2) {
+    throw new Errors.BadRequestError("each filter must have exactly two parts, an Aspect and an Annotation Status, separated by a comma");
+  }
 
-    const [aspect, annotationStatus] = parts;
-    if (!validateAspect(aspect)) {
-        throw new Errors.BadRequestError("the Aspect given in a filter must be exactly 'P', 'C', or 'F'");
-    }
-    if (!validateAnnotationStatus(annotationStatus)) {
-        throw new Errors.BadRequestError("the Annotation Status given in a filter must be exactly 'EXP', 'OTHER', 'UNKNOWN', or 'UNANNOTATED'");
-    }
+  const [aspect, annotationStatus] = parts;
+  if (!validateAspect(aspect)) {
+    throw new Errors.BadRequestError("the Aspect given in a filter must be exactly 'P', 'C', or 'F'");
+  }
+  if (!validateAnnotationStatus(annotationStatus)) {
+    throw new Errors.BadRequestError("the Annotation Status given in a filter must be exactly 'EXP', 'OTHER', 'UNKNOWN', or 'UNANNOTATED'");
+  }
 
-    return {aspect, annotationStatus};
+  return {aspect, annotationStatus};
 }
 
 /**
@@ -140,8 +140,8 @@ function validateSegments(maybeFilter: string): Segment {
  * @param maybeStrategy "union" | "intersection"
  */
 function validateStrategy(maybeStrategy: string): Strategy {
-    if (maybeStrategy !== "union" && maybeStrategy !== "intersection") {
-        throw new Errors.BadRequestError("strategy must be either 'union' or 'intersection'");
-    }
-    return maybeStrategy;
+  if (maybeStrategy !== "union" && maybeStrategy !== "intersection") {
+    throw new Errors.BadRequestError("strategy must be either 'union' or 'intersection'");
+  }
+  return maybeStrategy;
 }
