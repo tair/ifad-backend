@@ -1,4 +1,4 @@
-import {parseAnnotationsData, parseGenesData, splitAnnotationsText} from "../ingest";
+import {parseAnnotationsData, parseGenesData, splitMetadataText} from "../ingest";
 
 const gene_data = `
 AT1G01010	protein_coding
@@ -85,9 +85,9 @@ TAIR	locus:2125359	CTU2		GO:0000049	TAIR:AnalysisReference:501756966	IEA	InterPr
 TAIR	locus:2136328	AT4G39280		GO:0000049	TAIR:AnalysisReference:501756966	IEA	InterPro:IPR002319	F	AT4G39280	AT4G39280|T22F8.180|T22F8_180	protein	taxon:3702	20190907	InterPro		TAIR:locus:2136328
 TAIR	locus:2143266	TRM1b		GO:0000049	TAIR:AnalysisReference:501756968	IEA	UniProtKB-KW:KW-0820	F	AT5G15810	AT5G15810|TRM1b|AtTRM1b|tRNA methyltransferase 1b|F14F8.190|F14F8_190	protein	taxon:3702	20190907	UniProt		TAIR:locus:2143266`;
 
-    const result = splitAnnotationsText(raw_annotation_text);
+    const result = splitMetadataText(raw_annotation_text);
     if (!result) fail("test data should split correctly");
-    const { metadataText, annotationsText } = result;
+    const { metadataText, bodyText } = result;
 
     const expected_metadata = `!gaf-version: 2.1
 !
@@ -132,7 +132,7 @@ TAIR	locus:2124519	AT4G18460		GO:0000049	TAIR:AnalysisReference:501756970	IEA	Un
 TAIR	locus:2125359	CTU2		GO:0000049	TAIR:AnalysisReference:501756966	IEA	InterPro:IPR019407	F	AT4G35910	AT4G35910|CTU2|CYTOPLASMIC THIOURIDYLASE 2|T19K4.40	protein	taxon:3702	20190601	InterPro		TAIR:locus:2125359
 TAIR	locus:2136328	AT4G39280		GO:0000049	TAIR:AnalysisReference:501756966	IEA	InterPro:IPR002319	F	AT4G39280	AT4G39280|T22F8.180|T22F8_180	protein	taxon:3702	20190907	InterPro		TAIR:locus:2136328
 TAIR	locus:2143266	TRM1b		GO:0000049	TAIR:AnalysisReference:501756968	IEA	UniProtKB-KW:KW-0820	F	AT5G15810	AT5G15810|TRM1b|AtTRM1b|tRNA methyltransferase 1b|F14F8.190|F14F8_190	protein	taxon:3702	20190907	UniProt		TAIR:locus:2143266`;
-    expect(annotationsText).toEqual(expected_annotations);
+    expect(bodyText).toEqual(expected_annotations);
 
   });
 
@@ -157,9 +157,9 @@ TAIR	locus:2043067	ENOC		GO:0000015	TAIR:AnalysisReference:501756966	IEA	InterPr
 TAIR	locus:2044851	LOS2		GO:0000015	TAIR:AnalysisReference:501756966	IEA	InterPro:IPR000941	C	AT2G36530	AT2G36530|LOS2|ENO2|LOW EXPRESSION OF OSMOTICALLY RESPONSIVE GENES 2|enolase 2|F1O11.16|F1O11_16	protein	taxon:3702	20190408	InterPro		TAIR:locus:2044851
 TAIR	locus:2032970	AT1G25260		GO:0000027	TAIR:AnalysisReference:501756966	IEA	InterPro:IPR033867	P	AT1G25260	AT1G25260|F4F7.35|F4F7_35	protein	taxon:3702	20190404	InterPro		TAIR:locus:2032970`;
 
-    const result = splitAnnotationsText(raw_annotation_text);
+    const result = splitMetadataText(raw_annotation_text);
     if (!result) fail("test data should split correctly");
-    const { metadataText, annotationsText } = result;
+    const { metadataText, bodyText } = result;
 
     const expected_metadata = `
 
@@ -185,7 +185,7 @@ TAIR	locus:2043067	ENOC		GO:0000015	TAIR:AnalysisReference:501756966	IEA	InterPr
 TAIR	locus:2044851	LOS2		GO:0000015	TAIR:AnalysisReference:501756966	IEA	InterPro:IPR000941	C	AT2G36530	AT2G36530|LOS2|ENO2|LOW EXPRESSION OF OSMOTICALLY RESPONSIVE GENES 2|enolase 2|F1O11.16|F1O11_16	protein	taxon:3702	20190408	InterPro		TAIR:locus:2044851
 TAIR	locus:2032970	AT1G25260		GO:0000027	TAIR:AnalysisReference:501756966	IEA	InterPro:IPR033867	P	AT1G25260	AT1G25260|F4F7.35|F4F7_35	protein	taxon:3702	20190404	InterPro		TAIR:locus:2032970`;
 
-    expect(annotationsText).toEqual(expected_annotations);
+    expect(bodyText).toEqual(expected_annotations);
   });
 
 });

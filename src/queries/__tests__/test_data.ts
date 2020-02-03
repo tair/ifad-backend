@@ -238,7 +238,11 @@ export const structuredData: StructuredData = {
     records: annotationRecords,
     index: indexAnnotations(geneIndex, annotationRecords),
   },
-  geneIndex,
+  genes: {
+    metadata: "",
+    records: [],
+    index: geneIndex,
+  },
 };
 
 describe("the test data", () => {

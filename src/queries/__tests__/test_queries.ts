@@ -6,7 +6,7 @@ describe("Annotation queries", () => {
   it("should return all annotations and genes that appear in them with FilterGetAll", () => {
     const query: QueryGetAll = { tag: "QueryGetAll" };
 
-    const expectedGeneMap = Object.entries(structuredData.geneIndex)
+    const expectedGeneMap = Object.entries(structuredData.genes.index)
       // There is a specific gene which does not belong to any annotations called ATBLAHBLAH.
       // This query should have all of the genes except that one.
       .filter(([geneId, _]) => geneId !== "ATBLAHBLAH")

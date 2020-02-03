@@ -63,7 +63,7 @@ export class V1Service {
   @Path("/wgs_segments")
   @GET
   get_wgs() {
-    const totalGeneCount = Object.keys(dataset.geneIndex).length;
+    const totalGeneCount = Object.keys(dataset.genes.index).length;
 
     const result = Object.entries(dataset.annotations.index)
       .reduce((acc, [aspect, {all, known: {all: known_all, exp, other}, unknown}]) => {

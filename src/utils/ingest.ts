@@ -115,18 +115,19 @@ export const parseGenesData = (input: string): Gene[] | null => {
 
 
 /**
- * Describes the two regions of an Annotations file. An annotations file
+ * Describes the two regions of a file with metadata. A file
  * is first split into these regions, then each region is further processed.
  *
- * See AnnotationData to see richer structure of the data downstream.
+ * See AnnotationData or GeneData to see richer structure of
+ * the data downstream.
  */
-type AnnotationText = {
+type MetadataAndBody = {
   metadataText: string,
-  annotationsText: string,
+  bodyText: string,
 };
 
 /**
- * Splits an Annotations file into the metadata header and the rest of the body.
+ * Splits a file into a metadata header and the rest of the body.
  *
  * Given the following file contents, we would want the capture groups to look
  * like the following:
@@ -157,36 +158,36 @@ type AnnotationText = {
 const metadataRegex = /^((?:\s*(?:![^\n]*)?\n)*)(.*$)/s;
 
 /**
- * Given the text of an annotations file (e.g. tair.gaf), split the contents of the
- * file into "metadata" and "annotationsText".
+ * Given the text of a file (e.g. tair.gaf or gene-types.txt), split the contents of the
+ * file into "metadata" and "bodyText".
  *
  * The "metadata" string includes all lines from the beginning of the file until the
- * first line which does not begin with "!". The "annotationsText" string includes
+ * first line which does not begin with "!". The "bodyText" string includes
  * all of the remaining text from the original string.
  *
- * @param body The body of the original annotations input file.
+ * @param body The body of the original input file.
  */
-export const splitAnnotationsText = (body: string): AnnotationText | null => {
+export const splitMetadataText = (body: string): MetadataAndBody | null => {
   const matches = body.match(metadataRegex);
   if (!matches) return null;
   if (matches.length < 3) return null;
   const metadataText = matches[1];
-  const annotationsText = matches[2];
-  return {metadataText, annotationsText};
+  const bodyText = matches[2];
+  return {metadataText, bodyText};
 };
 
 
 /**
- * The type of structured metadata. For now, we don't do any analysis on the
- * metadata, so we simply preserve the metadata string.
+ * The type of structured annotation metadata. For now, we don't do any analysis
+ * on the annotation metadata, so we simply preserve the metadata string.
  */
-type Metadata = string;
+type AnnotationMetadata = string;
 
 /**
  * The type of fully-parsed, structured annotations data.
  */
 type AnnotationData = {
-  metadata: Metadata,
+  metadata: AnnotationMetadata,
   records: Annotation[],
 };
 
@@ -197,12 +198,42 @@ type AnnotationData = {
  * @param body The text of the raw annotations data.
  */
 export const parseAnnotationsText = (body: string): AnnotationData | null => {
-  const splitText = splitAnnotationsText(body);
+  const splitText = splitMetadataText(body);
   if (!splitText) return null;
-  const {metadataText, annotationsText} = splitText;
-  const annotations = parseAnnotationsData(annotationsText);
+  const {metadataText, bodyText} = splitText;
+  const annotations = parseAnnotationsData(bodyText);
   if (!annotations) return null;
   return {metadata: metadataText, records: annotations};
+};
+
+
+/**
+ * The type of structured gene metadata. For now, we don't do any analysis
+ * on the gene metadata, so we simply preserve the metadata string.
+ */
+type GeneMetadata = string;
+
+/**
+ * The type of fully-parsed, structured genes data.
+ */
+type GeneData = {
+  metadata: GeneMetadata,
+  records: Gene[],
+};
+
+/**
+ * Given the text of the genes data (without the metadata from the file),
+ * parse the data and return it in a structured format.
+ *
+ * @param body The text of the raw genes data.
+ */
+export const parseGenesText = (body: string): GeneData | null => {
+  const splitText = splitMetadataText(body);
+  if (!splitText) return null;
+  const {metadataText, bodyText} = splitText;
+  const genes = parseGenesData(bodyText);
+  if (!genes) return null;
+  return {metadata: metadataText, records: genes};
 };
 
 
@@ -327,11 +358,21 @@ export type UnstructuredText = {
 };
 
 /**
+ * Contains all of the structured-unindexed gene data as well as all
+ * of the structured-indexed gene data.
+ */
+export type StructuredGenes = {
+  metadata: GeneMetadata,
+  records: Gene[],
+  index: GeneIndex,
+};
+
+/**
  * Contains all of the structured-unindexed annotation data as well as all
  * of the structured-indexed annotation data.
  */
 export type StructuredAnnotations = {
-  metadata: Metadata,
+  metadata: AnnotationMetadata,
   records: Annotation[],
   index: AnnotationIndex<Set<Gene>>,
 };
@@ -341,7 +382,7 @@ export type StructuredAnnotations = {
  * UnstructuredText given to ingestData.
  */
 export type StructuredData = {
-  geneIndex: GeneIndex,
+  genes: StructuredGenes,
   annotations: StructuredAnnotations,
   raw: UnstructuredText,
 };
@@ -354,14 +395,20 @@ export type StructuredData = {
  */
 export const ingestData = (raw: UnstructuredText): StructuredData | null => {
   // Parse and index Gene data
-  const geneData = parseGenesData(raw.genesText);
+  const geneData = parseGenesText(raw.genesText);
   if (!geneData) return null;
-  const geneIndex = indexGenes(geneData);
+  const geneIndex = indexGenes(geneData.records);
 
   // Parse and index Annotation data
   const annotationData = parseAnnotationsText(raw.annotationsText);
   if (!annotationData) return null;
   const annotationIndex = indexAnnotations(geneIndex, annotationData.records);
+
+  const genes = {
+    metadata: geneData.metadata,
+    records: geneData.records,
+    index: geneIndex,
+  };
 
   // Store un-indexed and indexed Annotation data together
   const annotations = {
@@ -371,5 +418,5 @@ export const ingestData = (raw: UnstructuredText): StructuredData | null => {
   };
 
   // Return all structured data
-  return {geneIndex, annotations, raw};
+  return {genes, annotations, raw};
 };
