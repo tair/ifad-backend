@@ -27,7 +27,7 @@ const metadataSerializer = (metadata: {[key: string]: string}) => Object.entries
 export function annotationsToGAF(data: StructuredData, additionalMetadata: {[key: string]: string} = {}){
     const serialized = serialize(data.annotations.records, {
         fields: ANNOTATION_COLUMNS.map(col=>column_modifiers.get(col) || col as string),
-        header: false,
+        header: true,
         defaultValue: "",
         excelStrings: false
     });
@@ -42,7 +42,7 @@ export function annotationsToGAF(data: StructuredData, additionalMetadata: {[key
 export function genesToCSV(data: StructuredData, additionalMetadata: {[key: string]: string} = {}){
     const serialized = serialize(Object.values(data.genes.index).map(val=>val.gene), {
         fields: GENE_COLUMNS,
-        header: false,
+        header: true,
         defaultValue: "",
         excelStrings: false
     });
