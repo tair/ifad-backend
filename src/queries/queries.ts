@@ -1,4 +1,4 @@
-import {AnnotationStatus, Aspect, GeneIndex, Annotation, StructuredData} from "../utils/ingest";
+import { AnnotationStatus, Aspect, GeneIndex, Annotation, StructuredData } from "../utils/ingest";
 
 /**
  * A Segment describes exactly one Aspect and one AnnotationStatus.

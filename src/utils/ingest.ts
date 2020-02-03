@@ -1,5 +1,5 @@
 import parse from "csv-parse/lib/sync";
-import {evidenceCodes} from "../config";
+import { evidenceCodes } from "../config";
 
 /**
  * Each Annotation may belong to one of the following three Aspects:
@@ -172,7 +172,7 @@ export const splitAnnotationsText = (body: string): AnnotationText | null => {
   if (matches.length < 3) return null;
   const metadataText = matches[1];
   const annotationsText = matches[2];
-  return {metadataText, annotationsText};
+  return { metadataText, annotationsText };
 };
 
 
@@ -199,10 +199,10 @@ type AnnotationData = {
 export const parseAnnotationsText = (body: string): AnnotationData | null => {
   const splitText = splitAnnotationsText(body);
   if (!splitText) return null;
-  const {metadataText, annotationsText} = splitText;
+  const { metadataText, annotationsText } = splitText;
   const annotations = parseAnnotationsData(annotationsText);
   if (!annotations) return null;
-  return {metadata: metadataText, records: annotations};
+  return { metadata: metadataText, records: annotations };
 };
 
 
@@ -262,9 +262,9 @@ export type AnnotationIndex<T> = {
  * @param initial A function which produces an initial value to put at each key.
  */
 export const makeAnnotationIndex = <T>(initial: () => T): AnnotationIndex<T> => ({
-  P: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}},
-  F: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}},
-  C: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}},
+  P: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
+  F: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
+  C: { all: initial(), unknown: initial(), known: { all: initial(), exp: initial(), other: initial() } },
 });
 
 /**
@@ -279,7 +279,7 @@ export const makeAnnotationIndex = <T>(initial: () => T): AnnotationIndex<T> => 
  * @param annotationData The parsed annotation data.
  */
 export const indexAnnotations = (
-  geneIndex: GeneIndex, 
+  geneIndex: GeneIndex,
   annotationData: Annotation[]
 ): AnnotationIndex<Set<Gene>> => {
 
@@ -291,7 +291,7 @@ export const indexAnnotations = (
       const geneId = annotation.AlternativeGeneName.find(name => !!geneIndex[name]);
       if (!geneId) return acc;
 
-      const {gene, annotations} = geneIndex[geneId];
+      const { gene, annotations } = geneIndex[geneId];
 
       // Add the current annotation to the list for the gene it belongs to.
       annotations.add(annotation);

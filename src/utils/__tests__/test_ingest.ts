@@ -1,4 +1,4 @@
-import {parseAnnotationsData, parseGenesData, splitAnnotationsText} from "../ingest";
+import { parseAnnotationsData, parseGenesData, splitAnnotationsText } from "../ingest";
 
 const gene_data = `
 AT1G01010	protein_coding
@@ -28,17 +28,17 @@ TAIR	locus:2163011	UVH1		GO:0000014	TAIR:Communication:501741973	IBA	PANTHER:PTN
 
 describe("Ingestion functions", () => {
 
-    it("should parse a set of Annotations", () => {
-        expect(parseAnnotationsData(annotation_data)).toMatchSnapshot();
-    });
+  it("should parse a set of Annotations", () => {
+    expect(parseAnnotationsData(annotation_data)).toMatchSnapshot();
+  });
 
-    it("should parse a set of Gene IDs and Gene Product Types", () => {
-        expect(parseGenesData(gene_data)).toMatchSnapshot();
-    });
+  it("should parse a set of Gene IDs and Gene Product Types", () => {
+    expect(parseGenesData(gene_data)).toMatchSnapshot();
+  });
 
-    it("should not fail if the input text is empty", () => {
-        expect(() => parseGenesData("")).not.toThrow();
-    });
+  it("should not fail if the input text is empty", () => {
+    expect(() => parseGenesData("")).not.toThrow();
+  });
 });
 
 describe("The Annotation text parser", () => {

@@ -1,5 +1,5 @@
 import { structuredData } from "./test_data";
-import {QueryGetAll, QueryWith, queryAnnotated, QueryOption} from "../queries";
+import { QueryGetAll, QueryWith, queryAnnotated, QueryOption } from "../queries";
 
 describe("Annotation queries", () => {
 
@@ -20,7 +20,8 @@ describe("Annotation queries", () => {
   });
 
   it("should choose the proper subset for FilterWith:union for C:KNOWN_EXP", () => {
-    const query: QueryWith = { tag: "QueryWith",
+    const query: QueryWith = {
+      tag: "QueryWith",
       strategy: "union",
       segments: [{ aspect: "C", annotationStatus: "KNOWN_EXP" }],
     };
@@ -32,12 +33,13 @@ describe("Annotation queries", () => {
           GeneProductType: "pseudogene"
         },
         annotations: new Set([
-          { DatabaseID: 'locus:2117706',
+          {
+            DatabaseID: 'locus:2117706',
             Invert: false,
             GOTerm: 'GO:0005634',
             Reference: 'TAIR:Publication:501713238|PMID:15356386',
             EvidenceCode: 'IDA',
-            AdditionalEvidence: [ '' ],
+            AdditionalEvidence: [''],
             Aspect: 'C',
             UniqueGeneName: 'AT4G18120',
             AlternativeGeneName: [
@@ -51,18 +53,20 @@ describe("Annotation queries", () => {
             GeneProductType: 'pseudogene',
             Date: "2006-05-19T00:00:00.000Z",
             AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_EXP' }
+            AnnotationStatus: 'KNOWN_EXP'
+          }
         ])
       },
     };
 
     const expectedAnnotations = [
-      { DatabaseID: 'locus:2117706',
+      {
+        DatabaseID: 'locus:2117706',
         Invert: false,
         GOTerm: 'GO:0005634',
         Reference: 'TAIR:Publication:501713238|PMID:15356386',
         EvidenceCode: 'IDA',
-        AdditionalEvidence: [ '' ],
+        AdditionalEvidence: [''],
         Aspect: 'C',
         UniqueGeneName: 'AT4G18120',
         AlternativeGeneName: [
@@ -76,7 +80,8 @@ describe("Annotation queries", () => {
         GeneProductType: 'pseudogene',
         Date: "2006-05-19T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_EXP' }
+        AnnotationStatus: 'KNOWN_EXP'
+      }
     ];
 
     expect(queryAnnotated(structuredData, query))
@@ -84,7 +89,8 @@ describe("Annotation queries", () => {
   });
 
   it("should choose a proper subset for FilterWith:union for C:KNOWN_OTHER", () => {
-    const query: QueryWith = { tag: "QueryWith",
+    const query: QueryWith = {
+      tag: "QueryWith",
       strategy: "union",
       segments: [{ aspect: "C", annotationStatus: "KNOWN_OTHER" }],
     };
@@ -96,19 +102,21 @@ describe("Annotation queries", () => {
           GeneProductType: "protein_coding"
         },
         annotations: new Set([
-          { DatabaseID: 'locus:2012325',
+          {
+            DatabaseID: 'locus:2012325',
             Invert: false,
             GOTerm: 'GO:0005576',
             Reference: 'TAIR:AnalysisReference:501780126',
             EvidenceCode: 'ISM',
-            AdditionalEvidence: [ '' ],
+            AdditionalEvidence: [''],
             Aspect: 'C',
             UniqueGeneName: '',
-            AlternativeGeneName: [ 'AT1G09440', 'AT1G09440.2' ],
+            AlternativeGeneName: ['AT1G09440', 'AT1G09440.2'],
             GeneProductType: 'protein',
             Date: "2018-08-31T00:00:00.000Z",
             AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_OTHER' },
+            AnnotationStatus: 'KNOWN_OTHER'
+          },
         ])
       },
       AT1G08845: {
@@ -117,63 +125,71 @@ describe("Annotation queries", () => {
           GeneProductType: "protein_coding"
         },
         annotations: new Set([
-          { DatabaseID: 'locus:1005716736',
+          {
+            DatabaseID: 'locus:1005716736',
             Invert: false,
             GOTerm: 'GO:0005576',
             Reference: 'TAIR:AnalysisReference:501780126',
             EvidenceCode: 'ISM',
-            AdditionalEvidence: [ '' ],
+            AdditionalEvidence: [''],
             Aspect: 'C',
             UniqueGeneName: 'Heartstopper',
-            AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+            AlternativeGeneName: ['AT1G08845', 'AT1G08845.2'],
             GeneProductType: 'protein',
             Date: "2018-08-31T00:00:00.000Z",
             AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_OTHER' },
-          { DatabaseID: 'locus:1111111111',
+            AnnotationStatus: 'KNOWN_OTHER'
+          },
+          {
+            DatabaseID: 'locus:1111111111',
             Invert: false,
             GOTerm: 'GO:0005576',
             Reference: 'TAIR:AnalysisReference:501780126',
             EvidenceCode: 'ISM',
-            AdditionalEvidence: [ '' ],
+            AdditionalEvidence: [''],
             Aspect: 'P',
             UniqueGeneName: 'Heartstopper',
-            AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+            AlternativeGeneName: ['AT1G08845', 'AT1G08845.2'],
             GeneProductType: 'protein',
             Date: "2018-08-31T00:00:00.000Z",
             AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_OTHER' },
+            AnnotationStatus: 'KNOWN_OTHER'
+          },
         ])
       },
     };
 
     const expectedAnnotations = [
-      { DatabaseID: 'locus:2012325',
+      {
+        DatabaseID: 'locus:2012325',
         Invert: false,
         GOTerm: 'GO:0005576',
         Reference: 'TAIR:AnalysisReference:501780126',
         EvidenceCode: 'ISM',
-        AdditionalEvidence: [ '' ],
+        AdditionalEvidence: [''],
         Aspect: 'C',
         UniqueGeneName: '',
-        AlternativeGeneName: [ 'AT1G09440', 'AT1G09440.2' ],
+        AlternativeGeneName: ['AT1G09440', 'AT1G09440.2'],
         GeneProductType: 'protein',
         Date: "2018-08-31T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_OTHER' },
-      { DatabaseID: 'locus:1005716736',
+        AnnotationStatus: 'KNOWN_OTHER'
+      },
+      {
+        DatabaseID: 'locus:1005716736',
         Invert: false,
         GOTerm: 'GO:0005576',
         Reference: 'TAIR:AnalysisReference:501780126',
         EvidenceCode: 'ISM',
-        AdditionalEvidence: [ '' ],
+        AdditionalEvidence: [''],
         Aspect: 'C',
         UniqueGeneName: 'Heartstopper',
-        AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+        AlternativeGeneName: ['AT1G08845', 'AT1G08845.2'],
         GeneProductType: 'protein',
         Date: "2018-08-31T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_OTHER' },
+        AnnotationStatus: 'KNOWN_OTHER'
+      },
     ];
 
     expect(queryAnnotated(structuredData, query))
@@ -181,7 +197,8 @@ describe("Annotation queries", () => {
   });
 
   it("should return the union of results when using FilterWith:union for C:KNOWN_OTHER,P:KNOWN_OTHER", () => {
-    const query: QueryWith = { tag: "QueryWith",
+    const query: QueryWith = {
+      tag: "QueryWith",
       strategy: "union",
       segments: [
         { aspect: "C", annotationStatus: "KNOWN_OTHER" },
@@ -196,19 +213,21 @@ describe("Annotation queries", () => {
           GeneProductType: "protein_coding"
         },
         annotations: new Set([
-          { DatabaseID: 'locus:2012325',
+          {
+            DatabaseID: 'locus:2012325',
             Invert: false,
             GOTerm: 'GO:0005576',
             Reference: 'TAIR:AnalysisReference:501780126',
             EvidenceCode: 'ISM',
-            AdditionalEvidence: [ '' ],
+            AdditionalEvidence: [''],
             Aspect: 'C',
             UniqueGeneName: '',
-            AlternativeGeneName: [ 'AT1G09440', 'AT1G09440.2' ],
+            AlternativeGeneName: ['AT1G09440', 'AT1G09440.2'],
             GeneProductType: 'protein',
             Date: "2018-08-31T00:00:00.000Z",
             AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_OTHER' },
+            AnnotationStatus: 'KNOWN_OTHER'
+          },
         ])
       },
       AT1G08845: {
@@ -217,32 +236,36 @@ describe("Annotation queries", () => {
           GeneProductType: "protein_coding"
         },
         annotations: new Set([
-          { DatabaseID: 'locus:1005716736',
+          {
+            DatabaseID: 'locus:1005716736',
             Invert: false,
             GOTerm: 'GO:0005576',
             Reference: 'TAIR:AnalysisReference:501780126',
             EvidenceCode: 'ISM',
-            AdditionalEvidence: [ '' ],
+            AdditionalEvidence: [''],
             Aspect: 'C',
             UniqueGeneName: 'Heartstopper',
-            AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+            AlternativeGeneName: ['AT1G08845', 'AT1G08845.2'],
             GeneProductType: 'protein',
             Date: "2018-08-31T00:00:00.000Z",
             AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_OTHER' },
-          { DatabaseID: 'locus:1111111111',
+            AnnotationStatus: 'KNOWN_OTHER'
+          },
+          {
+            DatabaseID: 'locus:1111111111',
             Invert: false,
             GOTerm: 'GO:0005576',
             Reference: 'TAIR:AnalysisReference:501780126',
             EvidenceCode: 'ISM',
-            AdditionalEvidence: [ '' ],
+            AdditionalEvidence: [''],
             Aspect: 'P',
             UniqueGeneName: 'Heartstopper',
-            AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+            AlternativeGeneName: ['AT1G08845', 'AT1G08845.2'],
             GeneProductType: 'protein',
             Date: "2018-08-31T00:00:00.000Z",
             AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_OTHER' },
+            AnnotationStatus: 'KNOWN_OTHER'
+          },
         ])
       },
       AT5G40395: {
@@ -251,19 +274,21 @@ describe("Annotation queries", () => {
           GeneProductType: "small_nuclear_rna"
         },
         annotations: new Set([
-          { DatabaseID: 'locus:1005716828',
+          {
+            DatabaseID: 'locus:1005716828',
             Invert: false,
             GOTerm: 'GO:0000398',
             Reference: 'TAIR:Publication:501682431',
             EvidenceCode: 'TAS',
-            AdditionalEvidence: [ '' ],
+            AdditionalEvidence: [''],
             Aspect: 'P',
             UniqueGeneName: 'AT5G40395',
-            AlternativeGeneName: [ 'AT5G40395', 'U6acat', '67751.snRNA00001' ],
+            AlternativeGeneName: ['AT5G40395', 'U6acat', '67751.snRNA00001'],
             GeneProductType: 'snRNA',
             Date: "2006-02-07T00:00:00.000Z",
             AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_OTHER' },
+            AnnotationStatus: 'KNOWN_OTHER'
+          },
         ])
       },
       AT5G46315: {
@@ -272,12 +297,13 @@ describe("Annotation queries", () => {
           GeneProductType: "small_nuclear_rna"
         },
         annotations: new Set([
-          { DatabaseID: 'locus:1005716827',
+          {
+            DatabaseID: 'locus:1005716827',
             Invert: false,
             GOTerm: 'GO:0000398',
             Reference: 'TAIR:Publication:501682431',
             EvidenceCode: 'TAS',
-            AdditionalEvidence: [ '' ],
+            AdditionalEvidence: [''],
             Aspect: 'P',
             UniqueGeneName: 'AT5G46315',
             AlternativeGeneName: [
@@ -289,7 +315,8 @@ describe("Annotation queries", () => {
             GeneProductType: 'snRNA',
             Date: "2006-02-07T00:00:00.000Z",
             AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_OTHER' },
+            AnnotationStatus: 'KNOWN_OTHER'
+          },
         ])
       },
       AT1G67070: {
@@ -298,12 +325,13 @@ describe("Annotation queries", () => {
           GeneProductType: "protein_coding"
         },
         annotations: new Set([
-          { DatabaseID: 'locus:2019748',
+          {
+            DatabaseID: 'locus:2019748',
             Invert: false,
             GOTerm: 'GO:0000032',
             Reference: 'TAIR:Communication:501741973',
             EvidenceCode: 'IBA',
-            AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
+            AdditionalEvidence: ['PANTHER:PTN000034017', 'SGD:S000000805'],
             Aspect: 'P',
             UniqueGeneName: 'AT1G67070',
             AlternativeGeneName: [
@@ -318,7 +346,8 @@ describe("Annotation queries", () => {
             GeneProductType: 'protein',
             Date: "2018-06-15T00:00:00.000Z",
             AssignedBy: 'GOC',
-            AnnotationStatus: 'KNOWN_OTHER' },
+            AnnotationStatus: 'KNOWN_OTHER'
+          },
         ])
       },
       AT3G02570: {
@@ -327,12 +356,13 @@ describe("Annotation queries", () => {
           GeneProductType: "protein_coding"
         },
         annotations: new Set([
-          { DatabaseID: 'locus:2076864',
+          {
+            DatabaseID: 'locus:2076864',
             Invert: false,
             GOTerm: 'GO:0000032',
             Reference: 'TAIR:Communication:501741973',
             EvidenceCode: 'IBA',
-            AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
+            AdditionalEvidence: ['PANTHER:PTN000034017', 'SGD:S000000805'],
             Aspect: 'P',
             UniqueGeneName: 'AT3G02570',
             AlternativeGeneName: [
@@ -347,57 +377,65 @@ describe("Annotation queries", () => {
             GeneProductType: 'protein',
             Date: "2018-11-01T00:00:00.000Z",
             AssignedBy: 'GOC',
-            AnnotationStatus: 'KNOWN_OTHER' },
+            AnnotationStatus: 'KNOWN_OTHER'
+          },
         ])
       },
     };
 
     const expectedAnnotations = [
-      { DatabaseID: 'locus:2012325',
+      {
+        DatabaseID: 'locus:2012325',
         Invert: false,
         GOTerm: 'GO:0005576',
         Reference: 'TAIR:AnalysisReference:501780126',
         EvidenceCode: 'ISM',
-        AdditionalEvidence: [ '' ],
+        AdditionalEvidence: [''],
         Aspect: 'C',
         UniqueGeneName: '',
-        AlternativeGeneName: [ 'AT1G09440', 'AT1G09440.2' ],
+        AlternativeGeneName: ['AT1G09440', 'AT1G09440.2'],
         GeneProductType: 'protein',
         Date: "2018-08-31T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_OTHER' },
-      { DatabaseID: 'locus:1005716736',
+        AnnotationStatus: 'KNOWN_OTHER'
+      },
+      {
+        DatabaseID: 'locus:1005716736',
         Invert: false,
         GOTerm: 'GO:0005576',
         Reference: 'TAIR:AnalysisReference:501780126',
         EvidenceCode: 'ISM',
-        AdditionalEvidence: [ '' ],
+        AdditionalEvidence: [''],
         Aspect: 'C',
         UniqueGeneName: 'Heartstopper',
-        AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+        AlternativeGeneName: ['AT1G08845', 'AT1G08845.2'],
         GeneProductType: 'protein',
         Date: "2018-08-31T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_OTHER' },
-      { DatabaseID: 'locus:1005716828',
+        AnnotationStatus: 'KNOWN_OTHER'
+      },
+      {
+        DatabaseID: 'locus:1005716828',
         Invert: false,
         GOTerm: 'GO:0000398',
         Reference: 'TAIR:Publication:501682431',
         EvidenceCode: 'TAS',
-        AdditionalEvidence: [ '' ],
+        AdditionalEvidence: [''],
         Aspect: 'P',
         UniqueGeneName: 'AT5G40395',
-        AlternativeGeneName: [ 'AT5G40395', 'U6acat', '67751.snRNA00001' ],
+        AlternativeGeneName: ['AT5G40395', 'U6acat', '67751.snRNA00001'],
         GeneProductType: 'snRNA',
         Date: "2006-02-07T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_OTHER' },
-      { DatabaseID: 'locus:1005716827',
+        AnnotationStatus: 'KNOWN_OTHER'
+      },
+      {
+        DatabaseID: 'locus:1005716827',
         Invert: false,
         GOTerm: 'GO:0000398',
         Reference: 'TAIR:Publication:501682431',
         EvidenceCode: 'TAS',
-        AdditionalEvidence: [ '' ],
+        AdditionalEvidence: [''],
         Aspect: 'P',
         UniqueGeneName: 'AT5G46315',
         AlternativeGeneName: [
@@ -409,13 +447,15 @@ describe("Annotation queries", () => {
         GeneProductType: 'snRNA',
         Date: "2006-02-07T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_OTHER' },
-      { DatabaseID: 'locus:2019748',
+        AnnotationStatus: 'KNOWN_OTHER'
+      },
+      {
+        DatabaseID: 'locus:2019748',
         Invert: false,
         GOTerm: 'GO:0000032',
         Reference: 'TAIR:Communication:501741973',
         EvidenceCode: 'IBA',
-        AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
+        AdditionalEvidence: ['PANTHER:PTN000034017', 'SGD:S000000805'],
         Aspect: 'P',
         UniqueGeneName: 'AT1G67070',
         AlternativeGeneName: [
@@ -430,13 +470,15 @@ describe("Annotation queries", () => {
         GeneProductType: 'protein',
         Date: "2018-06-15T00:00:00.000Z",
         AssignedBy: 'GOC',
-        AnnotationStatus: 'KNOWN_OTHER' },
-      { DatabaseID: 'locus:2076864',
+        AnnotationStatus: 'KNOWN_OTHER'
+      },
+      {
+        DatabaseID: 'locus:2076864',
         Invert: false,
         GOTerm: 'GO:0000032',
         Reference: 'TAIR:Communication:501741973',
         EvidenceCode: 'IBA',
-        AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
+        AdditionalEvidence: ['PANTHER:PTN000034017', 'SGD:S000000805'],
         Aspect: 'P',
         UniqueGeneName: 'AT3G02570',
         AlternativeGeneName: [
@@ -451,20 +493,23 @@ describe("Annotation queries", () => {
         GeneProductType: 'protein',
         Date: "2018-11-01T00:00:00.000Z",
         AssignedBy: 'GOC',
-        AnnotationStatus: 'KNOWN_OTHER' },
-      { DatabaseID: 'locus:1111111111',
+        AnnotationStatus: 'KNOWN_OTHER'
+      },
+      {
+        DatabaseID: 'locus:1111111111',
         Invert: false,
         GOTerm: 'GO:0005576',
         Reference: 'TAIR:AnalysisReference:501780126',
         EvidenceCode: 'ISM',
-        AdditionalEvidence: [ '' ],
+        AdditionalEvidence: [''],
         Aspect: 'P',
         UniqueGeneName: 'Heartstopper',
-        AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+        AlternativeGeneName: ['AT1G08845', 'AT1G08845.2'],
         GeneProductType: 'protein',
         Date: "2018-08-31T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_OTHER' },
+        AnnotationStatus: 'KNOWN_OTHER'
+      },
     ];
 
     // Convert annotations lists to Sets in order to compare contents without order.
@@ -477,7 +522,8 @@ describe("Annotation queries", () => {
   });
 
   it("should find a single gene for QueryWith:intersection for C:KNOWN_OTHER,P:KNOWN_OTHER", () => {
-    const query: QueryOption = { tag: "QueryWith",
+    const query: QueryOption = {
+      tag: "QueryWith",
       strategy: "intersection",
       segments: [
         { aspect: "C", annotationStatus: "KNOWN_OTHER" },
@@ -494,32 +540,36 @@ describe("Annotation queries", () => {
         // Here, we add two annotations to a single gene that categorize it
         // under two different aspects. This is to test the intersection case.
         annotations: new Set([
-          { DatabaseID: 'locus:1005716736',
+          {
+            DatabaseID: 'locus:1005716736',
             Invert: false,
             GOTerm: 'GO:0005576',
             Reference: 'TAIR:AnalysisReference:501780126',
             EvidenceCode: 'ISM',
-            AdditionalEvidence: [ '' ],
+            AdditionalEvidence: [''],
             Aspect: 'C',
             UniqueGeneName: 'Heartstopper',
-            AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+            AlternativeGeneName: ['AT1G08845', 'AT1G08845.2'],
             GeneProductType: 'protein',
             Date: "2018-08-31T00:00:00.000Z",
             AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_OTHER' },
-          { DatabaseID: 'locus:1111111111',
+            AnnotationStatus: 'KNOWN_OTHER'
+          },
+          {
+            DatabaseID: 'locus:1111111111',
             Invert: false,
             GOTerm: 'GO:0005576',
             Reference: 'TAIR:AnalysisReference:501780126',
             EvidenceCode: 'ISM',
-            AdditionalEvidence: [ '' ],
+            AdditionalEvidence: [''],
             Aspect: 'P',
             UniqueGeneName: 'Heartstopper',
-            AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+            AlternativeGeneName: ['AT1G08845', 'AT1G08845.2'],
             GeneProductType: 'protein',
             Date: "2018-08-31T00:00:00.000Z",
             AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_OTHER' },
+            AnnotationStatus: 'KNOWN_OTHER'
+          },
         ])
       },
     };
