@@ -1,4 +1,4 @@
-import {AnnotationStatus, Aspect, GeneIndex, Annotation} from "../utils/ingest";
+import {AnnotationStatus, Aspect, GeneIndex, Annotation, StructuredData} from "../utils/ingest";
 
 /**
  * A Segment describes exactly one Aspect and one AnnotationStatus.
@@ -41,8 +41,7 @@ export type QueryWith = {
  * return the subset of Genes and Annotations represented by the query.
  */
 export const queryAnnotated = (
-  annotations: Annotation[],
-  geneMap: GeneIndex,
+  dataset: StructuredData,
   query: QueryOption,
 ): [GeneIndex, Annotation[]] => {
 
@@ -50,7 +49,7 @@ export const queryAnnotated = (
     // When no segments are provided in the query, we simply return all annotations
     // and all of the genes that those annotations reference.
     case "QueryGetAll": {
-      return queryAll(annotations, geneMap);
+      return queryAll(dataset);
     }
 
     case "QueryWith": {
@@ -59,7 +58,7 @@ export const queryAnnotated = (
         // Find the union of all of the segments given in the query options. This will
         // include all genes or annotations which match _any_ of the given segments.
         case "union": {
-          return queryWithUnion(annotations, geneMap, query.segments);
+          return queryWithUnion(dataset, query.segments);
         }
 
         // Find the intersection of all of the segments given in the query options.
@@ -67,7 +66,7 @@ export const queryAnnotated = (
         // Annotations can never belong to more than one segment.
         // TODO the intersection of ONE segment should still return annotations
         case "intersection": {
-          return queryWithIntersection(annotations, geneMap, query.segments);
+          return queryWithIntersection(dataset, query.segments);
         }
       }
     }
@@ -81,13 +80,10 @@ export const queryAnnotated = (
  * Note that if there are any genes in the dataset which are never
  * referenced by any annotations, they will not be returned.
  *
- * @param annotations The active dataset of annotations to query over.
- * @param geneMap The active dataset of genes to query over.
+ * @param dataset The active dataset to query results from.
  */
-const queryAll = (
-  annotations: Annotation[],
-  geneMap: GeneIndex,
-): [GeneIndex, Annotation[]] => {
+const queryAll = (dataset: StructuredData): [GeneIndex, Annotation[]] => {
+  const annotations = dataset.annotations.records;
 
   // Construct a list of all gene names in all annotations.
   const geneNamesInAnnotations = new Set(
@@ -95,7 +91,7 @@ const queryAll = (
   );
 
   // Group all of the genes that appear in the annotations list.
-  const queriedGenes = Object.entries(geneMap)
+  const queriedGenes = Object.entries(dataset.geneIndex)
     .filter(([geneId, _]) => geneNamesInAnnotations.has(geneId))
     .reduce((acc, [geneId, gene]) => {
       acc[geneId] = gene;
@@ -110,16 +106,15 @@ const queryAll = (
  * to at least one of the given segments, as well as all of the genes
  * referenced by those annotations.
  *
- * @param annotations The active dataset of annotations to query over.
- * @param geneMap The active dataset of genes to query over.
+ * @param dataset The active dataset to query results from.
  * @param segments A list of segments given by the user in order to find
  * all genes that belong to the union of those segments.
  */
 const queryWithUnion = (
-  annotations: Annotation[],
-  geneMap: GeneIndex,
+  dataset: StructuredData,
   segments: Segment[],
 ): [GeneIndex, Annotation[]] => {
+  const annotations = dataset.annotations.records;
 
   const queriedAnnotations = annotations.filter((item: Annotation) => {
     return segments.some(filter =>
@@ -132,7 +127,7 @@ const queryWithUnion = (
     queriedAnnotations.flatMap(a => [a.UniqueGeneName, ...a.AlternativeGeneName])
   );
 
-  const queriedGenes = Object.entries(geneMap)
+  const queriedGenes = Object.entries(dataset.geneIndex)
     .filter(([geneId, _]) => geneNamesInAnnotations.has(geneId))
     .reduce((acc, [geneId, gene]) => {
       acc[geneId] = gene;
@@ -146,17 +141,15 @@ const queryWithUnion = (
  * Returns all of the genes from the given dataset which have at least
  * one annotation in _all_ of the given segments.
  *
- * @param annotations The active dataset of annotations to query over.
- * @param geneMap The active dataset of genes to query over.
+ * @param dataset The active dataset to query results from.
  * @param segments A list of segments given by the user in order to find
  * all genes that belong to the intersection of those segments.
  */
 const queryWithIntersection = (
-  annotations: Annotation[],
-  geneMap: GeneIndex,
+  dataset: StructuredData,
   segments: Segment[],
 ): [GeneIndex, Annotation[]] => {
-  const queriedGeneMap = Object.entries(geneMap)
+  const queriedGeneMap = Object.entries(dataset.geneIndex)
     .filter(([_, { annotations }]) => {
 
       const gene_annotations = [...annotations];

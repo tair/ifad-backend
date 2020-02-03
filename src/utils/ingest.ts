@@ -187,7 +187,7 @@ type Metadata = string;
  */
 type AnnotationData = {
   metadata: Metadata,
-  annotations: Annotation[],
+  records: Annotation[],
 };
 
 /**
@@ -202,7 +202,7 @@ export const parseAnnotationsText = (body: string): AnnotationData | null => {
   const {metadataText, annotationsText} = splitText;
   const annotations = parseAnnotationsData(annotationsText);
   if (!annotations) return null;
-  return {metadata: metadataText, annotations};
+  return {metadata: metadataText, records: annotations};
 };
 
 
@@ -278,7 +278,7 @@ export const makeAnnotationIndex = <T>(initial: () => T): AnnotationIndex<T> => 
  * @param geneIndex The index of gene names to Gene objects.
  * @param annotationData The parsed annotation data.
  */
-const indexAnnotations = (
+export const indexAnnotations = (
   geneIndex: GeneIndex, 
   annotationData: Annotation[]
 ): AnnotationIndex<Set<Gene>> => {
@@ -331,7 +331,8 @@ export type UnstructuredText = {
  * of the structured-indexed annotation data.
  */
 export type StructuredAnnotations = {
-  data: AnnotationData,
+  metadata: Metadata,
+  records: Annotation[],
   index: AnnotationIndex<Set<Gene>>,
 };
 
@@ -360,11 +361,12 @@ export const ingestData = (raw: UnstructuredText): StructuredData | null => {
   // Parse and index Annotation data
   const annotationData = parseAnnotationsText(raw.annotationsText);
   if (!annotationData) return null;
-  const annotationIndex = indexAnnotations(geneIndex, annotationData.annotations);
+  const annotationIndex = indexAnnotations(geneIndex, annotationData.records);
 
   // Store un-indexed and indexed Annotation data together
   const annotations = {
-    data: annotationData,
+    metadata: annotationData.metadata,
+    records: annotationData.records,
     index: annotationIndex,
   };
 

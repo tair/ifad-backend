@@ -1,8 +1,24 @@
+import {readFileSync} from "fs";
+import {resolve} from "path";
 import {Errors, GET, Path, QueryParam} from "typescript-rest";
-import {AnnotationStatus, Aspect, makeAnnotationIndex, readData,} from "../../utils/ingest";
+import {
+  AnnotationStatus,
+  Aspect,
+  ingestData,
+  makeAnnotationIndex, StructuredData,
+  UnstructuredText
+} from "../../utils/ingest";
 import {queryAnnotated, QueryOption, Segment, Strategy} from "../../queries/queries";
 
-const { geneMap, annotations, groupedAnnotations } = readData();
+// TODO use data fetcher rather than files.
+console.log("Begin reading data");
+const genesText = readFileSync(resolve("src/assets/gene-types.txt")).toString();
+const annotationsText = readFileSync(resolve("src/assets/gene_association.tair")).toString();
+const unstructuredText: UnstructuredText = { genesText, annotationsText };
+const maybeDataset = ingestData(unstructuredText);
+if (!maybeDataset) throw new Error("failed to parse data");
+const dataset: StructuredData = maybeDataset;
+console.log("Finished parsing data");
 
 @Path("/api/v1")
 export class V1Service {
@@ -39,7 +55,7 @@ export class V1Service {
         }
 
         // TODO include unannotated genes
-        const [queriedGenes, queriedAnnotations] = queryAnnotated(annotations, geneMap, query);
+        const [queriedGenes, queriedAnnotations] = queryAnnotated(dataset, query);
 
         return {annotatedGenes: queriedGenes, annotations: queriedAnnotations, unannotatedGenes: []};
     }
@@ -47,20 +63,21 @@ export class V1Service {
     @Path("/wgs_segments")
     @GET
     get_wgs() {
-        const totalGeneCount = Object.keys(geneMap).length;
+      const totalGeneCount = Object.keys(dataset.geneIndex).length;
 
-        const result = Object.entries(groupedAnnotations).reduce((acc, [aspect, {all, known: {all: known_all, exp, other }, unknown}]) => {
-            acc[aspect].all = all.size;
-            acc[aspect].known.all = known_all.size;
-            acc[aspect].known.exp = exp.size;
-            acc[aspect].known.other = other.size;
-            acc[aspect].unknown = unknown.size;
-            acc[aspect].unannotated = totalGeneCount - all.size;
-            return acc;
-        }, makeAnnotationIndex(() => 0));
+      const result = Object.entries(dataset.annotations.index)
+        .reduce((acc, [aspect, {all, known: {all: known_all, exp, other }, unknown}]) => {
+          acc[aspect].all = all.size;
+          acc[aspect].known.all = known_all.size;
+          acc[aspect].known.exp = exp.size;
+          acc[aspect].known.other = other.size;
+          acc[aspect].unknown = unknown.size;
+          acc[aspect].unannotated = totalGeneCount - all.size;
+          return acc;
+      }, makeAnnotationIndex(() => 0));
 
-        result["totalGenes"] = totalGeneCount;
-        return result;
+      result["totalGenes"] = totalGeneCount;
+      return result;
     }
 }
 

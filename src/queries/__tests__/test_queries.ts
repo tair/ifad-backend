@@ -1,4 +1,4 @@
-import { geneMap, annotations } from "./test_data";
+import { structuredData } from "./test_data";
 import {QueryGetAll, QueryWith, queryAnnotated, QueryOption} from "../queries";
 
 describe("Annotation queries", () => {
@@ -6,7 +6,7 @@ describe("Annotation queries", () => {
   it("should return all annotations and genes that appear in them with FilterGetAll", () => {
     const query: QueryGetAll = { tag: "QueryGetAll" };
 
-    const expectedGeneMap = Object.entries(geneMap)
+    const expectedGeneMap = Object.entries(structuredData.geneIndex)
       // There is a specific gene which does not belong to any annotations called ATBLAHBLAH.
       // This query should have all of the genes except that one.
       .filter(([geneId, _]) => geneId !== "ATBLAHBLAH")
@@ -15,8 +15,8 @@ describe("Annotation queries", () => {
         return acc;
       }, {});
 
-    expect(queryAnnotated(annotations, geneMap, query))
-      .toEqual([expectedGeneMap, annotations]);
+    expect(queryAnnotated(structuredData, query))
+      .toEqual([expectedGeneMap, structuredData.annotations.records]);
   });
 
   it("should choose the proper subset for FilterWith:union for C:KNOWN_EXP", () => {
@@ -79,7 +79,7 @@ describe("Annotation queries", () => {
         AnnotationStatus: 'KNOWN_EXP' }
     ];
 
-    expect(queryAnnotated(annotations, geneMap, query))
+    expect(queryAnnotated(structuredData, query))
       .toEqual([expectedGeneMap, expectedAnnotations]);
   });
 
@@ -176,7 +176,7 @@ describe("Annotation queries", () => {
         AnnotationStatus: 'KNOWN_OTHER' },
     ];
 
-    expect(queryAnnotated(annotations, geneMap, query))
+    expect(queryAnnotated(structuredData, query))
       .toEqual([expectedGeneMap, expectedAnnotations]);
   });
 
@@ -468,7 +468,7 @@ describe("Annotation queries", () => {
     ];
 
     // Convert annotations lists to Sets in order to compare contents without order.
-    const [outputGeneMap, outputAnnotations] = queryAnnotated(annotations, geneMap, query);
+    const [outputGeneMap, outputAnnotations] = queryAnnotated(structuredData, query);
     const outputAnnotationsSet = new Set(outputAnnotations);
     const expectedAnnotationsSet = new Set(expectedAnnotations);
 
@@ -526,7 +526,7 @@ describe("Annotation queries", () => {
 
     const expectedAnnotations = [];
 
-    expect(queryAnnotated(annotations, geneMap, query))
+    expect(queryAnnotated(structuredData, query))
       .toEqual([expectedGeneMap, expectedAnnotations]);
   });
 });
