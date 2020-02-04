@@ -1,5 +1,5 @@
 import json2csv, { parse as serialize } from "json2csv";
-import { Annotation, ANNOTATION_COLUMNS, Gene, GENE_COLUMNS, StructuredData } from './ingest';
+import { Annotation, ANNOTATION_COLUMNS, GENE_COLUMNS, StructuredData } from './ingest';
 
 const column_modifiers: Map<string|null, json2csv.FieldInfo<Annotation>> = new Map([
     [null, {
@@ -27,9 +27,11 @@ const metadataSerializer = (metadata: {[key: string]: string}) => Object.entries
 export function annotationsToGAF(data: StructuredData, additionalMetadata: {[key: string]: string} = {}){
     const serialized = serialize(data.annotations.records, {
         fields: ANNOTATION_COLUMNS.map(col=>column_modifiers.get(col) || col as string),
-        header: true,
+        header: false,
         defaultValue: "",
-        excelStrings: false
+        excelStrings: false,
+        quote: '',
+        delimiter: '\t',
     });
 
     const header = Object.keys(additionalMetadata).length>0 ? 
@@ -44,7 +46,9 @@ export function genesToCSV(data: StructuredData, additionalMetadata: {[key: stri
         fields: GENE_COLUMNS,
         header: true,
         defaultValue: "",
-        excelStrings: false
+        excelStrings: false,
+        quote: '',
+        delimiter: '\t',
     });
 
     const header = Object.keys(additionalMetadata).length>0 ? 

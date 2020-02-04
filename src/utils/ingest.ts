@@ -6,9 +6,9 @@ import {evidenceCodes} from "../config";
  * Null indicates that we don't care about the column, but it's needed to select the right column number.
  */
 export const ANNOTATION_COLUMNS = [
-  null,
+  "DB",
   "DatabaseID",
-  null,
+  "DBObjectSymbol",
   "Invert",
   "GOTerm",
   "Reference",
@@ -18,11 +18,11 @@ export const ANNOTATION_COLUMNS = [
   "UniqueGeneName",
   "AlternativeGeneName",
   "GeneProductType",
-  null,
+  "Taxon",
   "Date",
   "AssignedBy",
-  null,
-  null,
+  "AnnotationExtension",
+  "GeneProductFormID",
 ];
 
 /**
@@ -60,7 +60,9 @@ export type AnnotationStatus = "KNOWN_EXP" | "KNOWN_OTHER" | "UNKNOWN" | "UNANNO
  * The structured form of the data read from an annotations file (e.g. tair.gaf).
  */
 export type Annotation = {
+  Db: string,
   DatabaseID: string,
+  DbObjectSymbol: string,
   Invert: boolean,
   GOTerm: string,
   Reference: string,
@@ -71,8 +73,11 @@ export type Annotation = {
   UniqueGeneName: string,
   AlternativeGeneName: string[],
   GeneProductType: string,
+  Taxon: string,
   Date: string,
   AssignedBy: string,
+  AnnotationExtension: string,
+  GeneProductFormID: string,
 };
 
 /**
