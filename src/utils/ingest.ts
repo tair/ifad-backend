@@ -6,9 +6,9 @@ import {evidenceCodes} from "../config";
  * Null indicates that we don't care about the column, but it's needed to select the right column number.
  */
 export const ANNOTATION_COLUMNS = [
-  "DB",
+  "Db",
   "DatabaseID",
-  "DBObjectSymbol",
+  "DbObjectSymbol",
   "Invert",
   "GOTerm",
   "Reference",
@@ -232,7 +232,18 @@ export const parseAnnotationsText = (body: string): AnnotationData | null => {
   const splitText = splitMetadataText(body);
   if (!splitText) return null;
   const {metadataText, bodyText} = splitText;
-  const annotations = parseAnnotationsData(bodyText);
+
+  // Check whether annotations body has headers
+  // TODO extract header slicing logic to its own function
+  const firstLine = bodyText.substring(0, bodyText.indexOf("\n"));
+  const hasHeaders = firstLine.includes("DB Object ID");
+  const trimmedBody = bodyText.substring(bodyText.indexOf("\n"));
+
+  let text;
+  if (hasHeaders) text = trimmedBody;
+  else text = bodyText;
+
+  const annotations = parseAnnotationsData(text);
   if (!annotations) return null;
   return {metadata: metadataText, records: annotations};
 };
