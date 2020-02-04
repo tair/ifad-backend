@@ -7,7 +7,9 @@ const geneIndex: GeneIndex = {
       GeneProductType: "pseudogene"
     },
     annotations: new Set([
-      { DatabaseID: 'locus:2117706',
+      { Db: '',
+        DatabaseID: 'locus:2117706',
+        DbObjectSymbol: '',
         Invert: false,
         GOTerm: 'GO:0005634',
         Reference: 'TAIR:Publication:501713238|PMID:15356386',
@@ -24,9 +26,12 @@ const geneIndex: GeneIndex = {
           'F15J5_90'
         ],
         GeneProductType: 'pseudogene',
+        Taxon: '',
         Date: "2006-05-19T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_EXP' }
+        AnnotationStatus: 'KNOWN_EXP',
+        AnnotationExtension: '',
+        GeneProductFormID: '' }
     ])
   },
   AT5G40395: {
@@ -35,7 +40,9 @@ const geneIndex: GeneIndex = {
       GeneProductType: "small_nuclear_rna"
     },
     annotations: new Set([
-      { DatabaseID: 'locus:1005716828',
+      { Db: '',
+        DatabaseID: 'locus:1005716828',
+        DbObjectSymbol: '',
         Invert: false,
         GOTerm: 'GO:0000398',
         Reference: 'TAIR:Publication:501682431',
@@ -45,9 +52,12 @@ const geneIndex: GeneIndex = {
         UniqueGeneName: 'AT5G40395',
         AlternativeGeneName: [ 'AT5G40395', 'U6acat', '67751.snRNA00001' ],
         GeneProductType: 'snRNA',
+        Taxon: '',
         Date: "2006-02-07T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_OTHER' },
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
     ])
   },
   AT5G46315: {
@@ -56,7 +66,9 @@ const geneIndex: GeneIndex = {
       GeneProductType: "small_nuclear_rna"
     },
     annotations: new Set([
-      { DatabaseID: 'locus:1005716827',
+      { Db: '',
+        DatabaseID: 'locus:1005716827',
+        DbObjectSymbol: '',
         Invert: false,
         GOTerm: 'GO:0000398',
         Reference: 'TAIR:Publication:501682431',
@@ -71,9 +83,12 @@ const geneIndex: GeneIndex = {
           '67796.snRNA00001'
         ],
         GeneProductType: 'snRNA',
+        Taxon: '',
         Date: "2006-02-07T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_OTHER' },
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
     ])
   },
   AT1G67070: {
@@ -82,7 +97,9 @@ const geneIndex: GeneIndex = {
       GeneProductType: "protein_coding"
     },
     annotations: new Set([
-      { DatabaseID: 'locus:2019748',
+      { Db: '',
+        DatabaseID: 'locus:2019748',
+        DbObjectSymbol: '',
         Invert: false,
         GOTerm: 'GO:0000032',
         Reference: 'TAIR:Communication:501741973',
@@ -100,9 +117,12 @@ const geneIndex: GeneIndex = {
           'F1O19_12'
         ],
         GeneProductType: 'protein',
+        Taxon: '',
         Date: "2018-06-15T00:00:00.000Z",
         AssignedBy: 'GOC',
-        AnnotationStatus: 'KNOWN_OTHER' },
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
     ])
   },
   AT3G02570: {
@@ -111,7 +131,9 @@ const geneIndex: GeneIndex = {
       GeneProductType: "protein_coding"
     },
     annotations: new Set([
-      { DatabaseID: 'locus:2076864',
+      { Db: '',
+        DatabaseID: 'locus:2076864',
+        DbObjectSymbol: '',
         Invert: false,
         GOTerm: 'GO:0000032',
         Reference: 'TAIR:Communication:501741973',
@@ -130,8 +152,11 @@ const geneIndex: GeneIndex = {
         ],
         GeneProductType: 'protein',
         Date: "2018-11-01T00:00:00.000Z",
+        Taxon: '',
         AssignedBy: 'GOC',
-        AnnotationStatus: 'KNOWN_OTHER' },
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
     ])
   },
   AT1G65290: {
@@ -140,7 +165,9 @@ const geneIndex: GeneIndex = {
       GeneProductType: "protein_coding"
     },
     annotations: new Set([
-      { DatabaseID: 'locus:2206300',
+      { Db: '',
+        DatabaseID: 'locus:2206300',
+        DbObjectSymbol: '',
         Invert: false,
         GOTerm: 'GO:0000035',
         Reference: 'TAIR:Communication:501741973',
@@ -156,9 +183,12 @@ const geneIndex: GeneIndex = {
           'T8F5_6'
         ],
         GeneProductType: 'protein',
+        Taxon: '',
         Date: "2018-08-03T00:00:00.000Z",
         AssignedBy: 'GOC',
-        AnnotationStatus: 'KNOWN_OTHER' },
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
     ])
   },
   AT1G09440: {
@@ -167,7 +197,9 @@ const geneIndex: GeneIndex = {
       GeneProductType: "protein_coding"
     },
     annotations: new Set([
-      { DatabaseID: 'locus:2012325',
+      { Db: '',
+        DatabaseID: 'locus:2012325',
+        DbObjectSymbol: '',
         Invert: false,
         GOTerm: 'GO:0005576',
         Reference: 'TAIR:AnalysisReference:501780126',
@@ -177,9 +209,12 @@ const geneIndex: GeneIndex = {
         UniqueGeneName: '',
         AlternativeGeneName: [ 'AT1G09440', 'AT1G09440.2' ],
         GeneProductType: 'protein',
+        Taxon: '',
         Date: "2018-08-31T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_OTHER' },
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
     ])
   },
   AT1G08845: {
@@ -190,7 +225,9 @@ const geneIndex: GeneIndex = {
     // Here, we add two annotations to a single gene that categorize it
     // under two different aspects. This is to test the intersection case.
     annotations: new Set([
-      { DatabaseID: 'locus:1005716736',
+      { Db: '',
+        DatabaseID: 'locus:1005716736',
+        DbObjectSymbol: '',
         Invert: false,
         GOTerm: 'GO:0005576',
         Reference: 'TAIR:AnalysisReference:501780126',
@@ -200,10 +237,15 @@ const geneIndex: GeneIndex = {
         UniqueGeneName: 'Heartstopper',
         AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
         GeneProductType: 'protein',
+        Taxon: '',
         Date: "2018-08-31T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_OTHER' },
-      { DatabaseID: 'locus:1111111111',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
+      { Db: '',
+        DatabaseID: 'locus:1111111111',
+        DbObjectSymbol: '',
         Invert: false,
         GOTerm: 'GO:0005576',
         Reference: 'TAIR:AnalysisReference:501780126',
@@ -213,9 +255,12 @@ const geneIndex: GeneIndex = {
         UniqueGeneName: 'Heartstopper',
         AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
         GeneProductType: 'protein',
+        Taxon: '',
         Date: "2018-08-31T00:00:00.000Z",
         AssignedBy: 'TAIR',
-        AnnotationStatus: 'KNOWN_OTHER' },
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
     ])
   },
   // This "gene" does not appear in any annotations
