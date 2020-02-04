@@ -73,7 +73,7 @@ export class V1Service {
     switch (format) {
       case "gaf":
         const gafFile = Buffer.from(annotationsToGAF(dataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")}));
-        return new Return.DownloadBinaryData(gafFile,"application/csv", "gene-association.csv");
+        return new Return.DownloadBinaryData(gafFile,"application/csv", "gene-association.gaf");
       case "gene-csv":
         const csvFile = Buffer.from(genesToCSV(dataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")}));
         return new Return.DownloadBinaryData(csvFile,"application/csv", "gene-types.txt");
