@@ -2,6 +2,38 @@ import parse from "csv-parse/lib/sync";
 import {evidenceCodes} from "../config";
 
 /**
+ * Indicate which columns in the GAF file will be mapped to what fields on the Annotation object.
+ * Null indicates that we don't care about the column, but it's needed to select the right column number.
+ */
+export const ANNOTATION_COLUMNS = [
+  "Db",
+  "DatabaseID",
+  "DbObjectSymbol",
+  "Invert",
+  "GOTerm",
+  "Reference",
+  "EvidenceCode",
+  "AdditionalEvidence",
+  "Aspect",
+  "UniqueGeneName",
+  "AlternativeGeneName",
+  "GeneProductType",
+  "Taxon",
+  "Date",
+  "AssignedBy",
+  "AnnotationExtension",
+  "GeneProductFormID",
+];
+
+/**
+ * Similar to ANNOTATION_COLUMNS, this indicates which columns in the gene file map to which object attributes.
+ */
+export const GENE_COLUMNS = [
+  "GeneID",
+  "GeneProductType"
+];
+
+/**
  * Each Annotation may belong to one of the following three Aspects:
  *
  *   * F: Molecular Function
@@ -28,7 +60,9 @@ export type AnnotationStatus = "KNOWN_EXP" | "KNOWN_OTHER" | "UNKNOWN" | "UNANNO
  * The structured form of the data read from an annotations file (e.g. tair.gaf).
  */
 export type Annotation = {
+  Db: string,
   DatabaseID: string,
+  DbObjectSymbol: string,
   Invert: boolean,
   GOTerm: string,
   Reference: string,
@@ -39,8 +73,11 @@ export type Annotation = {
   UniqueGeneName: string,
   AlternativeGeneName: string[],
   GeneProductType: string,
+  Taxon: string,
   Date: string,
   AssignedBy: string,
+  AnnotationExtension: string,
+  GeneProductFormID: string,
 };
 
 /**
@@ -56,11 +93,6 @@ export const parseAnnotationsData = (input: string): Annotation[] | null => {
     if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) return "KNOWN_EXP";
     return "KNOWN_OTHER";
   };
-
-  const ANNOTATION_COLUMNS = [
-    null, "DatabaseID", null, "Invert", "GOTerm", "Reference", "EvidenceCode", "AdditionalEvidence", "Aspect",
-    "UniqueGeneName", "AlternativeGeneName", "GeneProductType", null, "Date", "AssignedBy", null, null,
-  ];
 
   return parse(input, {
     columns: ANNOTATION_COLUMNS,
@@ -101,7 +133,6 @@ export type Gene = {
  * @param input The raw genes text to be parsed.
  */
 export const parseGenesData = (input: string): Gene[] | null => {
-  const GENE_COLUMNS = ["GeneID", "GeneProductType"];
 
   return parse(input, {
     columns: GENE_COLUMNS,
@@ -201,7 +232,18 @@ export const parseAnnotationsText = (body: string): AnnotationData | null => {
   const splitText = splitMetadataText(body);
   if (!splitText) return null;
   const {metadataText, bodyText} = splitText;
-  const annotations = parseAnnotationsData(bodyText);
+
+  // Check whether annotations body has headers
+  // TODO extract header slicing logic to its own function
+  const firstLine = bodyText.substring(0, bodyText.indexOf("\n"));
+  const hasHeaders = firstLine.includes("DB Object ID");
+  const trimmedBody = bodyText.substring(bodyText.indexOf("\n"));
+
+  let text;
+  if (hasHeaders) text = trimmedBody;
+  else text = bodyText;
+
+  const annotations = parseAnnotationsData(text);
   if (!annotations) return null;
   return {metadata: metadataText, records: annotations};
 };

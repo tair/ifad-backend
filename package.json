@@ -9,8 +9,11 @@
   "dependencies": {
     "@types/csv-parse": "^1.2.2",
     "@types/node": "^12.12.14",
+    "@types/json2csv": "^4.5.0",
+    "cors": "^2.8.5",
     "csv-parse": "^4.4.7",
     "dotenv": "^8.2.0",
+    "json2csv": "^4.5.4",
     "ts-node-dev": "^1.0.0-pre.43",
     "typescript": "^3.6.3",
     "typescript-rest": "^2.2.2"

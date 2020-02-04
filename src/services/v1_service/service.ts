@@ -1,24 +1,28 @@
 import {readFileSync} from "fs";
 import {resolve} from "path";
-import {Errors, GET, Path, QueryParam} from "typescript-rest";
+import {Errors, GET, Path, QueryParam, Return} from "typescript-rest";
+import {queryAnnotated, QueryOption, Segment, Strategy} from "../../queries/queries";
 import {
   AnnotationStatus,
   Aspect,
   ingestData,
-  makeAnnotationIndex, StructuredData,
+  makeAnnotationIndex,
+  StructuredData,
   UnstructuredText
 } from "../../utils/ingest";
-import {queryAnnotated, QueryOption, Segment, Strategy} from "../../queries/queries";
+import {annotationsToGAF, genesToCSV} from '../../utils/exporters';
 
 // TODO use data fetcher rather than files.
 console.log("Begin reading data");
-const genesText = readFileSync(resolve("src/assets/gene-types.txt")).toString();
-const annotationsText = readFileSync(resolve("src/assets/gene_association.tair")).toString();
+const genesText = readFileSync(process.env["GENES_FILE"] || resolve("src/assets/gene-types.txt")).toString();
+const annotationsText = readFileSync(process.env["ANNOTATIONS_FILE"] || resolve("src/assets/gene_association.tair")).toString();
 const unstructuredText: UnstructuredText = {genesText, annotationsText};
 const maybeDataset = ingestData(unstructuredText);
 if (!maybeDataset) throw new Error("failed to parse data");
 const dataset: StructuredData = maybeDataset;
 console.log("Finished parsing data");
+
+type Format = "gaf" | "gene-csv" | "json";
 
 @Path("/api/v1")
 export class V1Service {
@@ -40,6 +44,13 @@ export class V1Service {
      * match). The default value is "union".
      */
     @QueryParam("strategy") maybeStrategy: string = "union",
+    /**
+     * ?format
+     * This query parameter is used to choose the file format which the
+     * selected data is returned in. This is JSON by default, but may also
+     * be set to "gaf" for annotation data, or "gene-csv" for gene data.
+     */
+    @QueryParam("format") maybeFormat: string = "json",
   ) {
     // Validate all of the filter query params. This throws a 400 if any are formatted incorrectly.
     const segments: Segment[] = (maybeFilters || []).map(validateSegments);
@@ -57,7 +68,18 @@ export class V1Service {
     // TODO include unannotated genes
     const [queriedGenes, queriedAnnotations] = queryAnnotated(dataset, query);
 
-    return {annotatedGenes: queriedGenes, annotations: queriedAnnotations, unannotatedGenes: []};
+    // TODO include unannotated genes
+    const format = validateFormat(maybeFormat);
+    switch (format) {
+      case "gaf":
+        const gafFile = Buffer.from(annotationsToGAF(dataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")}));
+        return new Return.DownloadBinaryData(gafFile,"application/csv", "gene-association.gaf");
+      case "gene-csv":
+        const csvFile = Buffer.from(genesToCSV(dataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")}));
+        return new Return.DownloadBinaryData(csvFile,"application/csv", "gene-types.txt");
+      case "json":
+        return {annotatedGenes: queriedGenes, annotations: queriedAnnotations, unannotatedGenes: []};
+    }
   }
 
   @Path("/wgs_segments")
@@ -144,4 +166,22 @@ function validateStrategy(maybeStrategy: string): Strategy {
     throw new Errors.BadRequestError("strategy must be either 'union' or 'intersection'");
   }
   return maybeStrategy;
+}
+
+/**
+ * Validates that a query string is a proper Format, either 'gaf', 'gene-csv', or 'json'.
+ *
+ * Throws a 400 if the query is ill-formatted.
+ *
+ * @param maybeFormat "gaf", "gene-csv", or "json".
+ */
+function validateFormat(maybeFormat: string): Format {
+  if (
+    maybeFormat !== "gaf" &&
+    maybeFormat !== "gene-csv" &&
+    maybeFormat !== "json"
+  ) {
+    throw new Errors.BadRequestError("format must be 'gaf', 'gene-csv', or 'json'");
+  }
+  return maybeFormat;
 }
