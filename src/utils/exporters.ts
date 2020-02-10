@@ -52,6 +52,7 @@ export function annotationsToGAF(data: StructuredData, additionalMetadata: { [ke
     transformer._implicitHeader = () => {};
 
     const header = buildAnnotationMetadata(data, additionalMetadata);
+    const csv_header = data.annotations.header;
 
     const input = new Readable({ objectMode: true });
     input._read = () => { };
@@ -65,6 +66,7 @@ export function annotationsToGAF(data: StructuredData, additionalMetadata: { [ke
 
     return combine()
         .append(header+"\n")
+        .append(csv_header+"\n")
         .append(transformer)
         .append(null)
 }
@@ -82,7 +84,7 @@ export function genesToCSV(data: StructuredData, additionalMetadata: { [key: str
 
     const transformer = new Transform({
         fields: GENE_COLUMNS,
-        header: true,
+        header: false,
         defaultValue: "",
         excelStrings: false,
         quote: '',
@@ -93,6 +95,7 @@ export function genesToCSV(data: StructuredData, additionalMetadata: { [key: str
     transformer._implicitHeader = () => {};
 
     const header = buildGenesMetadata(data, additionalMetadata);
+    const csv_header = data.genes.header;
 
     const input = new Readable({ objectMode: true });
     input._read = () => { };
@@ -106,6 +109,7 @@ export function genesToCSV(data: StructuredData, additionalMetadata: { [key: str
 
     return combine()
         .append(header+"\n")
+        .append(csv_header+"\n")
         .append(transformer)
         .append(null)
 }

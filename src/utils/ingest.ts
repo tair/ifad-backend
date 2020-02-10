@@ -145,6 +145,42 @@ export const parseGenesData = (input: string): Gene[] | null => {
 };
 
 
+type HeaderAndBody = {
+  headerText: string,
+  bodyText: string,
+};
+
+/**
+ * Slices the first line from a body of text.
+ *
+ * Returns an object with the sliced header and the trimmed body.
+ *
+ * If a "headerCheck" string is provided, then this function will only
+ * return a sliced header-and-body if the headerCheck string was contained
+ * in the header line. This can be used if you're uncertain whether a body
+ * of text will actually contain a header, but if you know a string that
+ * would certainly appear in the header if it exists (such as a header
+ * column name).
+ *
+ * @param body The original body of text to slice a header from.
+ * @param headerCheck A string to check that it appears in the header.
+ */
+const sliceHeader = (body: string, headerCheck: string = ""): HeaderAndBody | null => {
+  const firstLine = body.substring(0, body.indexOf("\n"));
+  const hasHeaders = firstLine.includes(headerCheck);
+  const trimmedBody = body.substring(body.indexOf("\n"));
+
+  // If the given body did not have a header (according to the headerCheck),
+  // then return null.
+  if (!hasHeaders) return null;
+
+  return {
+    headerText: firstLine,
+    bodyText: trimmedBody,
+  };
+};
+
+
 /**
  * Describes the two regions of a file with metadata. A file
  * is first split into these regions, then each region is further processed.
@@ -219,6 +255,7 @@ type AnnotationMetadata = string;
  */
 type AnnotationData = {
   metadata: AnnotationMetadata,
+  header: string,
   records: Annotation[],
 };
 
@@ -234,18 +271,21 @@ export const parseAnnotationsText = (body: string): AnnotationData | null => {
   const {metadataText, bodyText} = splitText;
 
   // Check whether annotations body has headers
-  // TODO extract header slicing logic to its own function
-  const firstLine = bodyText.substring(0, bodyText.indexOf("\n"));
-  const hasHeaders = firstLine.includes("DB Object ID");
-  const trimmedBody = bodyText.substring(bodyText.indexOf("\n"));
-
-  let text;
-  if (hasHeaders) text = trimmedBody;
-  else text = bodyText;
+  const slicedText = sliceHeader(bodyText, "DB Object ID");
+  let header = "";
+  let text = bodyText;
+  if (slicedText) {
+    header = slicedText.headerText;
+    text = slicedText.bodyText;
+  }
 
   const annotations = parseAnnotationsData(text);
   if (!annotations) return null;
-  return {metadata: metadataText, records: annotations};
+  return {
+    metadata: metadataText,
+    records: annotations,
+    header,
+  };
 };
 
 
@@ -260,6 +300,7 @@ type GeneMetadata = string;
  */
 type GeneData = {
   metadata: GeneMetadata,
+  header: string,
   records: Gene[],
 };
 
@@ -273,9 +314,22 @@ export const parseGenesText = (body: string): GeneData | null => {
   const splitText = splitMetadataText(body);
   if (!splitText) return null;
   const {metadataText, bodyText} = splitText;
-  const genes = parseGenesData(bodyText);
+
+  const slicedText = sliceHeader(bodyText, "gene_model_type");
+  let header = "";
+  let text = bodyText;
+  if (slicedText) {
+    header = slicedText.headerText;
+    text = slicedText.bodyText;
+  }
+
+  const genes = parseGenesData(text);
   if (!genes) return null;
-  return {metadata: metadataText, records: genes};
+  return {
+    metadata: metadataText,
+    records: genes,
+    header,
+  };
 };
 
 
@@ -423,6 +477,7 @@ export type UnstructuredText = {
  */
 export type StructuredGenes = {
   metadata: GeneMetadata,
+  header: string,
   records: Gene[],
   index: GeneIndex,
 };
@@ -433,8 +488,9 @@ export type StructuredGenes = {
  */
 export type StructuredAnnotations = {
   metadata: AnnotationMetadata,
+  header: string,
   records: Annotation[],
-  index: AnnotationIndex<Set<string>>,
+  index: AnnotationIndex,
 };
 
 /**
@@ -464,15 +520,17 @@ export const ingestData = (raw: UnstructuredText): StructuredData | null => {
   if (!annotationData) return null;
   const annotationIndex = indexAnnotations(geneIndex, annotationData.records);
 
-  const genes = {
+  const genes: StructuredGenes = {
     metadata: geneData.metadata,
+    header: geneData.header,
     records: geneData.records,
     index: geneIndex,
   };
 
   // Store un-indexed and indexed Annotation data together
-  const annotations = {
+  const annotations: StructuredAnnotations = {
     metadata: annotationData.metadata,
+    header: annotationData.header,
     records: annotationData.records,
     index: annotationIndex,
   };
