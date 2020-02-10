@@ -6,7 +6,7 @@ services:
     container_name: "ifad"
     environment:
       GENES_FILE: "/ifad/files/gene-types.txt"
-      ANNOTATIONS_FILE: "/ifad/files/gene_association.tair"
+      ANNOTATIONS_FILE: "/ifad/files/tair.gaf"
     ports:
       - 80:3000
     volumes:
