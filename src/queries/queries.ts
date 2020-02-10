@@ -112,11 +112,13 @@ const queryAll = (dataset: StructuredData): QueryResult => {
     raw: dataset.raw,
     genes: {
       metadata: dataset.genes.metadata,
+      header: dataset.genes.header,
       records: dataset.genes.records,
       index: geneIndex,
     },
     annotations: {
       metadata: dataset.annotations.metadata,
+      header: dataset.annotations.header,
       records: dataset.annotations.records,
       index: annotationIndex,
     },
@@ -171,11 +173,13 @@ const querySegment = (
     raw: dataset.raw,
     genes: {
       metadata: dataset.genes.metadata,
+      header: dataset.genes.header,
       records: geneRecords,
       index: geneIndex,
     },
     annotations: {
       metadata: dataset.annotations.metadata,
+      header: dataset.annotations.header,
       records: queriedAnnotations,
       index: annotationIndex,
     },
@@ -219,11 +223,13 @@ const queryWithUnion = (
     raw: dataset.raw,
     genes: {
       metadata: dataset.genes.metadata,
+      header: dataset.genes.header,
       records: geneRecords,
       index: geneIndex,
     },
     annotations: {
       metadata: dataset.annotations.metadata,
+      header: dataset.annotations.header,
       records: annotationRecords,
       index: annotationIndex,
     },
@@ -269,11 +275,13 @@ const queryWithIntersection = (
     raw: dataset.raw,
     genes: {
       metadata: dataset.genes.metadata,
+      header: dataset.genes.header,
       records: geneRecords,
       index: geneIndex,
     },
     annotations: {
       metadata: dataset.annotations.metadata,
+      header: dataset.annotations.header,
       records: [],
       index: makeAnnotationIndex(() => new Set()),
     }

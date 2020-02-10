@@ -283,11 +283,13 @@ export const structuredData: StructuredData = {
   },
   annotations: {
     metadata: "!annotation metadata",
+    header: "Column A, Column B, Column C",
     records: annotationRecords,
     index: indexAnnotations(geneIndex, annotationRecords),
   },
   genes: {
     metadata: "!gene metadata",
+    header: "gene_id, gene_product_type",
     records: [],
     index: geneIndex,
   },
