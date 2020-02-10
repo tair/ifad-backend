@@ -24,6 +24,8 @@ console.log("Finished parsing data");
 
 type Format = "gaf" | "gene-csv" | "json";
 
+type QueryStatus = "EXP" | "OTHER" | "UNKNOWN" | "UNANNOTATED";
+
 @Path("/api/v1")
 export class V1Service {
 
@@ -117,11 +119,32 @@ function validateAspect(maybeAspect: string): maybeAspect is Aspect {
  *
  * @param maybeStatus
  */
-function validateAnnotationStatus(maybeStatus: string): maybeStatus is AnnotationStatus {
+function validateQueryStatus(maybeStatus: string): maybeStatus is QueryStatus {
   return maybeStatus === "EXP" ||
     maybeStatus === "OTHER" ||
     maybeStatus === "UNKNOWN" ||
     maybeStatus === "UNANNOTATED";
+}
+
+/**
+ * In order to prevent API compatibility with the frontend, we continue to
+ * use ("EXP" | "OTHER" | "UNKNOWN" | "UNANNOTATED") as the valid options
+ * for the query, but here we transform those into the inner-used
+ * ("KNOWN_EXP" | "KNOWN_OTHER" | "UNKNOWN" | "UNANNOTATED").
+ *
+ * @param queryStatus The Annotation status read from the API query.
+ */
+function intoAnnotationStatus(queryStatus: QueryStatus): AnnotationStatus {
+  switch (queryStatus) {
+    case "EXP":
+      return "KNOWN_EXP";
+    case "OTHER":
+      return "KNOWN_OTHER";
+    case "UNKNOWN":
+      return "UNKNOWN";
+    case "UNANNOTATED":
+      return "UNANNOTATED";
+  }
 }
 
 /**
@@ -142,14 +165,15 @@ function validateSegments(maybeFilter: string): Segment {
     throw new Errors.BadRequestError("each filter must have exactly two parts, an Aspect and an Annotation Status, separated by a comma");
   }
 
-  const [aspect, annotationStatus] = parts;
+  const [aspect, queryStatus] = parts;
   if (!validateAspect(aspect)) {
     throw new Errors.BadRequestError("the Aspect given in a filter must be exactly 'P', 'C', or 'F'");
   }
-  if (!validateAnnotationStatus(annotationStatus)) {
+  if (!validateQueryStatus(queryStatus)) {
     throw new Errors.BadRequestError("the Annotation Status given in a filter must be exactly 'EXP', 'OTHER', 'UNKNOWN', or 'UNANNOTATED'");
   }
 
+  const annotationStatus = intoAnnotationStatus(queryStatus);
   return {aspect, annotationStatus};
 }
 
