@@ -15,7 +15,7 @@ import {annotationsToGAF, genesToCSV} from '../../utils/exporters';
 // TODO use data fetcher rather than files.
 console.log("Begin reading data");
 const genesText = readFileSync(process.env["GENES_FILE"] || resolve("src/assets/gene-types.txt")).toString();
-const annotationsText = readFileSync(process.env["ANNOTATIONS_FILE"] || resolve("src/assets/gene_association.tair")).toString();
+const annotationsText = readFileSync(process.env["ANNOTATIONS_FILE"] || resolve("src/assets/tair.gaf")).toString();
 const unstructuredText: UnstructuredText = {genesText, annotationsText};
 const maybeDataset = ingestData(unstructuredText);
 if (!maybeDataset) throw new Error("failed to parse data");
