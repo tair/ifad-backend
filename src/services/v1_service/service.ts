@@ -1,6 +1,6 @@
 import {readFileSync} from "fs";
 import {resolve} from "path";
-import {Errors, GET, Path, QueryParam, Return} from "typescript-rest";
+import {Errors, GET, Path, QueryParam, Return, ContextResponse} from "typescript-rest";
 import {queryAnnotated, QueryOption, Segment, Strategy} from "../../queries/queries";
 import {
   AnnotationStatus,
@@ -11,6 +11,7 @@ import {
   UnstructuredText
 } from "../../utils/ingest";
 import {annotationsToGAF, genesToCSV} from '../../utils/exporters';
+import express from "express";
 
 // TODO use data fetcher rather than files.
 console.log("Begin reading data");
@@ -53,6 +54,7 @@ export class V1Service {
      * be set to "gaf" for annotation data, or "gene-csv" for gene data.
      */
     @QueryParam("format") maybeFormat: string = "json",
+    @ContextResponse response: express.Response
   ) {
     // Validate all of the filter query params. This throws a 400 if any are formatted incorrectly.
     const segments: Segment[] = (maybeFilters || []).map(validateSegments);
@@ -74,11 +76,19 @@ export class V1Service {
     const format = validateFormat(maybeFormat);
     switch (format) {
       case "gaf":
-        const gafFile = Buffer.from(annotationsToGAF(dataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")}));
-        return new Return.DownloadBinaryData(gafFile,"application/csv", "gene-association.gaf");
+        const gafFileStream = annotationsToGAF(dataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")});
+        response.status(200);
+        response.setHeader("Content-Type", "application/csv");
+        response.setHeader("Content-disposition", "attachment;filename=gene-association.gaf");
+        gafFileStream.pipe(response);
+        return Return.NoResponse;
       case "gene-csv":
-        const csvFile = Buffer.from(genesToCSV(dataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")}));
-        return new Return.DownloadBinaryData(csvFile,"application/csv", "gene-types.txt");
+        const csvFileStream = genesToCSV(dataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")});
+        response.status(200);
+        response.setHeader("Content-Type", "application/csv");
+        response.setHeader("Content-disposition", "attachment;filename=gene-types.csv");
+        csvFileStream.pipe(response);
+        return Return.NoResponse;
       case "json":
         return {annotatedGenes: queriedGenes, annotations: queriedAnnotations, unannotatedGenes: []};
     }

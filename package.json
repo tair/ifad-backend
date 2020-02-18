@@ -8,8 +8,10 @@
   "private": true,
   "dependencies": {
     "@types/csv-parse": "^1.2.2",
-    "@types/node": "^12.12.14",
     "@types/json2csv": "^4.5.0",
+    "@types/node": "^12.12.14",
+    "combine-streams": "^1.0.0",
+    "compression": "^1.7.4",
     "cors": "^2.8.5",
     "csv-parse": "^4.4.7",
     "dotenv": "^8.2.0",
@@ -28,7 +30,7 @@
     "tslint": "^5.20.0"
   },
   "scripts": {
-    "start": "ts-node -r dotenv/config src/index.ts",
+    "start": "node -r ts-node/register -r dotenv/config src/index.ts",
     "dev": "ts-node-dev -r dotenv/config --no-notify src/index.ts",
     "build": "tsc",
     "test": "jest"
