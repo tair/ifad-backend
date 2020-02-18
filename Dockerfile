@@ -1,4 +1,4 @@
-FROM nicholastmosher/ifad-frontend:latest AS frontend
+FROM nicholastmosher/ifad-frontend:v0.1.7 AS frontend
 
 FROM node:lts as backend
 
