@@ -7,7 +7,7 @@ import compression from "compression";
 
 const app = express();
 app.use(cors());
-// app.use(compression());
+app.use(compression());
 Server.buildServices(app, V1Service);
 
 app.use(/\/$/, (req, res) => res.redirect("/app/"));
