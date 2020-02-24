@@ -1,4 +1,10 @@
-import {AnnotationStatus, Aspect, GeneIndex, Annotation, StructuredData} from "../utils/ingest";
+import {
+  AnnotationStatus,
+  Aspect,
+  GeneIndex,
+  Annotation,
+  StructuredData,
+} from "../utils/ingest";
 
 /**
  * A Segment describes exactly one Aspect and one AnnotationStatus.
@@ -36,6 +42,11 @@ export type QueryWith = {
   segments: Segment[],
 };
 
+export type QueryResult = {
+  genes: GeneIndex,
+  annotations: Annotation[],
+};
+
 /**
  * Given the full set of Annotations and Genes and given a QueryOption,
  * return the subset of Genes and Annotations represented by the query.
@@ -43,7 +54,7 @@ export type QueryWith = {
 export const queryAnnotated = (
   dataset: StructuredData,
   query: QueryOption,
-): [GeneIndex, Annotation[]] => {
+): QueryResult => {
 
   switch (query.tag) {
     // When no segments are provided in the query, we simply return all annotations
@@ -82,7 +93,7 @@ export const queryAnnotated = (
  *
  * @param dataset The active dataset to query results from.
  */
-const queryAll = (dataset: StructuredData): [GeneIndex, Annotation[]] => {
+const queryAll = (dataset: StructuredData): QueryResult => {
   const annotations = dataset.annotations.records;
 
   // Construct a list of all gene names in all annotations.
@@ -98,7 +109,52 @@ const queryAll = (dataset: StructuredData): [GeneIndex, Annotation[]] => {
       return acc;
     }, {});
 
-  return [queriedGenes, annotations];
+  return {
+    genes: queriedGenes,
+    annotations,
+  };
+};
+
+const querySegment = (
+  dataset: StructuredData,
+  segment: Segment,
+): QueryResult => {
+  const aspect = dataset.annotations.index[segment.aspect];
+
+  // Collect all gene IDs that match this segment.
+  const geneIds = new Set<string>();
+  switch (segment.annotationStatus) {
+    case "KNOWN_EXP":
+      aspect.known.exp.forEach(gene => geneIds.add(gene));
+      break;
+    case "KNOWN_OTHER":
+      aspect.known.other.forEach(gene => geneIds.add(gene));
+      break;
+    case "UNKNOWN":
+      aspect.unknown.forEach(gene => geneIds.add(gene));
+      break;
+    case "UNANNOTATED":
+      aspect.unannotated.forEach(gene => geneIds.add(gene));
+      break;
+  }
+
+  const geneIdsArray: string[] = [...geneIds];
+  const genes: GeneIndex = geneIdsArray
+    .map(geneId => dataset.genes.index[geneId])
+    .reduce((acc, { gene, annotations }) => {
+      acc[gene.GeneID] = { gene, annotations };
+      return acc;
+    }, {});
+
+  const annotations: Annotation[] = geneIdsArray
+    .map(geneId => dataset.genes.index[geneId].annotations)
+    .flatMap(annotations => [...annotations])
+    .filter(annotation => {
+      return annotation.Aspect === segment.aspect &&
+        annotation.AnnotationStatus === segment.annotationStatus;
+    });
+
+  return { genes, annotations };
 };
 
 /**
@@ -113,28 +169,25 @@ const queryAll = (dataset: StructuredData): [GeneIndex, Annotation[]] => {
 const queryWithUnion = (
   dataset: StructuredData,
   segments: Segment[],
-): [GeneIndex, Annotation[]] => {
-  const annotations = dataset.annotations.records;
+): QueryResult => {
+  let queriedGenes: GeneIndex = {};
+  let queriedAnnotations: Annotation[] = [];
 
-  const queriedAnnotations = annotations.filter((item: Annotation) => {
-    return segments.some(filter =>
-      filter.aspect === item.Aspect &&
-      filter.annotationStatus === item.AnnotationStatus
-    );
-  });
+  for (const segment of segments) {
+    const { annotations, genes } = querySegment(dataset, segment);
 
-  const geneNamesInAnnotations = new Set(
-    queriedAnnotations.flatMap(a => [a.UniqueGeneName, ...a.AlternativeGeneName])
-  );
+    // Insert genes from this segment into the queriedGenes
+    Object.entries(genes)
+      .forEach(([geneId, gene]) =>
+        queriedGenes[geneId] = gene);
 
-  const queriedGenes = Object.entries(dataset.genes.index)
-    .filter(([geneId, _]) => geneNamesInAnnotations.has(geneId))
-    .reduce((acc, [geneId, gene]) => {
-      acc[geneId] = gene;
-      return acc;
-    }, {});
+    annotations.forEach(annotation => queriedAnnotations.push(annotation));
+  }
 
-  return [queriedGenes, queriedAnnotations];
+  return {
+    genes: queriedGenes,
+    annotations: queriedAnnotations,
+  };
 };
 
 /**
@@ -148,7 +201,7 @@ const queryWithUnion = (
 const queryWithIntersection = (
   dataset: StructuredData,
   segments: Segment[],
-): [GeneIndex, Annotation[]] => {
+): QueryResult => {
   const queriedGeneMap = Object.entries(dataset.genes.index)
     .filter(([_, { annotations }]) => {
 
@@ -170,56 +223,8 @@ const queryWithIntersection = (
       return acc;
     }, {});
 
-  return [queriedGeneMap, []];
+  return {
+    genes: queriedGeneMap,
+    annotations: [],
+  };
 };
-
-/**
- * Given a selector over Unannotated genes, return a subset of genes which
- * match the filter criteria of the selector.
- *
- * @param annotations The list of annotations over which to perform the query.
- * @param geneMap The map of unique genes which annotations may refer to.
- * @param filter
- */
-export const queryUnannotated = (
-  annotations: Annotation[],
-  geneMap: GeneIndex,
-  filter: QueryOption,
-): GeneIndex => {
-
-  switch (filter.tag) {
-    case "QueryGetAll":
-      const geneNamesInAnnotations = new Set(
-        annotations.flatMap(a => [...a.AlternativeGeneName, a.UniqueGeneName])
-      );
-      const queriedGenes = Object.entries(geneMap)
-        .filter(([geneId, _]) => geneNamesInAnnotations.has(geneId))
-        .reduce((acc, [geneId, gene]) => {
-          acc[geneId] = gene;
-          return acc;
-        }, {});
-      return queriedGenes;
-    default:
-  }
-
-  return {};
-
-  // const queriedAnnotations = annotations.filter((item: IAnnotation) =>
-  //   selector(({aspect}: IFilterParam) => item.Aspect === aspect)
-  // );
-  //
-  // const annotatedGeneNames = new Set(
-  //   queriedAnnotations
-  //     .flatMap(annotation => annotation.AlternativeGeneName)
-  // );
-  //
-  // return Object.entries(geneMap)
-  //   // Take only the gene entries which don't exist in the annotatedGeneNames
-  //   .filter(([geneId, _]) => !annotatedGeneNames.has(geneId))
-  //   // Reassemble the (geneId, gene) array into an object
-  //   .reduce((acc, [geneId, gene]) => {
-  //     acc[geneId] = gene;
-  //     return acc;
-  //   }, {});
-};
-

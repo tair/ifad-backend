@@ -315,7 +315,7 @@ const indexGenes = (geneData: Gene[]): GeneIndex => {
  * the given Aspect and AnnotationStatus, whereas an AnnotationIndex<number> can be
  * used to hold the count of how many genes belong to a given Aspect and AnnotationStatus.
  */
-export type AnnotationIndex<T> = {
+export type AnnotationIndex<T=Set<string>> = {
   [key in Aspect]: {
     all: T,
     unknown: T,
@@ -324,6 +324,7 @@ export type AnnotationIndex<T> = {
       exp: T,
       other: T,
     },
+    unannotated: T,
   }
 };
 
@@ -335,9 +336,9 @@ export type AnnotationIndex<T> = {
  * @param initial A function which produces an initial value to put at each key.
  */
 export const makeAnnotationIndex = <T>(initial: () => T): AnnotationIndex<T> => ({
-  P: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}},
-  F: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}},
-  C: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}},
+  P: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}, unannotated: initial()},
+  F: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}, unannotated: initial()},
+  C: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}, unannotated: initial()},
 });
 
 /**
@@ -354,14 +355,15 @@ export const makeAnnotationIndex = <T>(initial: () => T): AnnotationIndex<T> => 
 export const indexAnnotations = (
   geneIndex: GeneIndex,
   annotationData: Annotation[]
-): AnnotationIndex<Set<Gene>> => {
+): AnnotationIndex<Set<string>> => {
 
   // Index all annotations based on aspect, categorizing KNOWN_EXP but not KNOWN_OTHER
-  const tmpAnnotationIndex: AnnotationIndex<Set<Gene>> = annotationData
+  const expAndUnknownIndex: AnnotationIndex<Set<string>> = annotationData
     .reduce((acc, annotation) => {
       const aspect = annotation.Aspect;
       const annotationStatus = annotation.AnnotationStatus;
-      const geneId = annotation.AlternativeGeneName.find(name => !!geneIndex[name]);
+      const geneId = [annotation.UniqueGeneName, ...annotation.AlternativeGeneName]
+        .find(name => !!geneIndex[name]);
       if (!geneId) return acc;
 
       const {gene, annotations} = geneIndex[geneId];
@@ -370,25 +372,41 @@ export const indexAnnotations = (
       annotations.add(annotation);
 
       // Add gene to the proper index in the AnnotationIndex
-      acc[aspect].all.add(gene);
+      acc[aspect].all.add(gene.GeneID);
       if (annotationStatus === "UNKNOWN") {
-        acc[aspect].unknown.add(gene);
+        acc[aspect].unknown.add(gene.GeneID);
       } else {
-        acc[aspect].known.all.add(gene);
+        acc[aspect].known.all.add(gene.GeneID);
         if (annotationStatus === "KNOWN_EXP") {
-          acc[aspect].known.exp.add(gene);
+          acc[aspect].known.exp.add(gene.GeneID);
         }
       }
       return acc;
-    }, makeAnnotationIndex<Set<Gene>>(() => new Set()));
+    }, makeAnnotationIndex<Set<string>>(() => new Set()));
 
   // Calculate known.other by finding all genes that are in KNOWN_OTHER but not KNOWN_EXP
-  return Object.entries(tmpAnnotationIndex)
+  const expUnknownAndOtherIndex: AnnotationIndex<Set<string>> =  Object.entries(expAndUnknownIndex)
     .reduce((acc, [aspect, index]) => {
       index.known.other = new Set([...index.known.all].filter(gene => !index.known.exp.has(gene)));
       acc[aspect] = index;
       return acc;
-    }, makeAnnotationIndex<Set<Gene>>(() => new Set()));
+    }, makeAnnotationIndex<Set<string>>(() => new Set()));
+
+  // For each Gene (G), and for each Aspect (A):
+  // If gene G does not appear in the annotations for aspect A, then
+  // add gene G to the "Unannotated" set for aspect A.
+  const fullIndex = expUnknownAndOtherIndex;
+  const aspects: Aspect[] = ["P", "C", "F"];
+  Object.keys(geneIndex).forEach((gene: string) => {
+    for (const aspect of aspects) {
+      const inAspect = fullIndex[aspect].all.has(gene);
+      if (!inAspect) {
+        fullIndex[aspect].unannotated.add(gene);
+      }
+    }
+  });
+
+  return fullIndex;
 };
 
 /**
@@ -416,7 +434,7 @@ export type StructuredGenes = {
 export type StructuredAnnotations = {
   metadata: AnnotationMetadata,
   records: Annotation[],
-  index: AnnotationIndex<Set<Gene>>,
+  index: AnnotationIndex<Set<string>>,
 };
 
 /**

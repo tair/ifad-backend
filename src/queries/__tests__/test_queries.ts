@@ -7,7 +7,7 @@ describe("Annotation queries", () => {
   it("should return all annotations and genes that appear in them with FilterGetAll", () => {
     const query: QueryGetAll = { tag: "QueryGetAll" };
 
-    const expectedGeneMap = Object.entries(structuredData.genes.index)
+    const expectedGeneIndex = Object.entries(structuredData.genes.index)
       // There is a specific gene which does not belong to any annotations called ATBLAHBLAH.
       // This query should have all of the genes except that one.
       .filter(([geneId, _]) => geneId !== "ATBLAHBLAH")
@@ -16,8 +16,13 @@ describe("Annotation queries", () => {
         return acc;
       }, {});
 
+    const expectedQueryResult = {
+      genes: expectedGeneIndex,
+      annotations: structuredData.annotations.records,
+    };
+
     expect(queryAnnotated(structuredData, query))
-      .toEqual([expectedGeneMap, structuredData.annotations.records]);
+      .toEqual(expectedQueryResult);
   });
 
   it("should choose the proper subset for FilterWith:union for C:KNOWN_EXP", () => {
@@ -26,7 +31,7 @@ describe("Annotation queries", () => {
       segments: [{ aspect: "C", annotationStatus: "KNOWN_EXP" }],
     };
 
-    const expectedGeneMap = {
+    const expectedGeneIndex = {
       AT4G18120: {
         gene: {
           GeneID: "AT4G18120",
@@ -90,8 +95,13 @@ describe("Annotation queries", () => {
         GeneProductFormID: '' }
     ];
 
+    const expectedQueryResult = {
+      genes: expectedGeneIndex,
+      annotations: expectedAnnotations,
+    };
+
     expect(queryAnnotated(structuredData, query))
-      .toEqual([expectedGeneMap, expectedAnnotations]);
+      .toEqual(expectedQueryResult);
   });
 
   it("should choose a proper subset for FilterWith:union for C:KNOWN_OTHER", () => {
@@ -100,7 +110,7 @@ describe("Annotation queries", () => {
       segments: [{ aspect: "C", annotationStatus: "KNOWN_OTHER" }],
     };
 
-    const expectedGeneMap: GeneIndex = {
+    const expectedGeneIndex: GeneIndex = {
       AT1G09440: {
         gene: {
           GeneID: "AT1G09440",
@@ -212,8 +222,13 @@ describe("Annotation queries", () => {
         GeneProductFormID: '' },
     ];
 
+    const expectedQueryResult = {
+      genes: expectedGeneIndex,
+      annotations: expectedAnnotations,
+    };
+
     expect(queryAnnotated(structuredData, query))
-      .toEqual([expectedGeneMap, expectedAnnotations]);
+      .toEqual(expectedQueryResult);
   });
 
   it("should return the union of results when using FilterWith:union for C:KNOWN_OTHER,P:KNOWN_OTHER", () => {
@@ -225,7 +240,7 @@ describe("Annotation queries", () => {
       ],
     };
 
-    const expectedGeneMap: GeneIndex = {
+    const expectedGeneIndex: GeneIndex = {
       AT1G09440: {
         gene: {
           GeneID: "AT1G09440",
@@ -574,12 +589,12 @@ describe("Annotation queries", () => {
     ];
 
     // Convert annotations lists to Sets in order to compare contents without order.
-    const [outputGeneMap, outputAnnotations] = queryAnnotated(structuredData, query);
-    const outputAnnotationsSet = new Set(outputAnnotations);
+    const { genes, annotations } = queryAnnotated(structuredData, query);
+    const outputAnnotationsSet = new Set(annotations);
     const expectedAnnotationsSet = new Set(expectedAnnotations);
 
-    expect([outputGeneMap, outputAnnotationsSet])
-      .toEqual([expectedGeneMap, expectedAnnotationsSet]);
+    expect([genes, outputAnnotationsSet])
+      .toEqual([expectedGeneIndex, expectedAnnotationsSet]);
   });
 
   it("should find a single gene for QueryWith:intersection for C:KNOWN_OTHER,P:KNOWN_OTHER", () => {
@@ -591,7 +606,7 @@ describe("Annotation queries", () => {
       ],
     };
 
-    const expectedGeneMap: GeneIndex = {
+    const expectedGeneIndex: GeneIndex = {
       AT1G08845: {
         gene: {
           GeneID: "AT1G08845",
@@ -641,8 +656,12 @@ describe("Annotation queries", () => {
     };
 
     const expectedAnnotations = [];
+    const expectedQueryResult = {
+      genes: expectedGeneIndex,
+      annotations: expectedAnnotations,
+    };
 
     expect(queryAnnotated(structuredData, query))
-      .toEqual([expectedGeneMap, expectedAnnotations]);
+      .toEqual(expectedQueryResult);
   });
 });
