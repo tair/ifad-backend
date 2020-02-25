@@ -30,6 +30,24 @@ type QueryStatus = "EXP" | "OTHER" | "UNKNOWN" | "UNANNOTATED";
 @Path("/api/v1")
 export class V1Service {
 
+  @Path('/genes_metadata')
+  @GET
+  genes_metadata() {
+    const metadata = dataset.genes.metadata;
+    return {
+      metadata
+    }
+  }
+
+  @Path('/annotations_metadata')
+  @GET
+  annotations_metadata() {
+    const metadata = dataset.annotations.metadata;
+    return {
+      metadata
+    }
+  }
+
   @Path("/genes")
   @GET
   genes(
