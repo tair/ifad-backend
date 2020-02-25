@@ -2,6 +2,7 @@ import json2csv, { parse as serialize, Transform } from "json2csv";
 import { Annotation, ANNOTATION_COLUMNS, GENE_COLUMNS, StructuredData } from './ingest';
 import { Readable, PassThrough } from "stream"
 import combine from "combine-streams";
+import moment from "moment";
 
 const column_modifiers: Map<string | null, json2csv.FieldInfo<Annotation>> = new Map([
     [null, {
@@ -22,9 +23,20 @@ const column_modifiers: Map<string | null, json2csv.FieldInfo<Annotation>> = new
     }]
 ])
 
-const metadataSerializer = (metadata: { [key: string]: string }) => Object.entries(metadata)
+export const metadataSerializer = (metadata: { [key: string]: string }) => Object.entries(metadata)
     .map((([key, value]) => `!${key}: ${value}`))
     .reduce((accum, curr) => `${accum}\n${curr}`, "");
+
+const additionalHeaders = (metadata: {[key: string]: string}) => `!=================================
+!
+!The data represents a subset of data filtered according to the following parameters on ${moment().format("MM-DD-YYYY")}.${metadataSerializer(metadata)}`
+
+export function buildAnnotationMetadata(data: StructuredData, additionalMetadata: { [key: string]: string } = {}){
+    const header = Object.keys(additionalMetadata).length > 0 ?
+        `${data.annotations.metadata.trim()}\n${additionalHeaders(additionalMetadata).trim()}` :
+        data.annotations.metadata
+    return header;
+}
 
 export function annotationsToGAF(data: StructuredData, additionalMetadata: { [key: string]: string } = {}) {
     const transformer = new Transform({
@@ -39,9 +51,7 @@ export function annotationsToGAF(data: StructuredData, additionalMetadata: { [ke
     //@ts-ignore
     transformer._implicitHeader = () => {};
 
-    const header = Object.keys(additionalMetadata).length > 0 ?
-        `${data.annotations.metadata.trim()}\n${metadataSerializer(additionalMetadata).trim()}` :
-        data.annotations.metadata
+    const header = buildAnnotationMetadata(data, additionalMetadata);
 
     const input = new Readable({ objectMode: true });
     input._read = () => { };
@@ -59,6 +69,14 @@ export function annotationsToGAF(data: StructuredData, additionalMetadata: { [ke
         .append(null)
 }
 
+export function buildGenesMetadata(data: StructuredData, additionalMetadata: { [key: string]: string } = {}){
+    const header = Object.keys(additionalMetadata).length > 0 ?
+        `${data.genes.metadata.trim()}\n${additionalHeaders(additionalMetadata).trim()}` :
+        data.genes.metadata
+
+    return header;
+}
+
 export function genesToCSV(data: StructuredData, additionalMetadata: { [key: string]: string } = {}) {
     const inputs = Object.values(data.genes.index).map(val => val.gene);
 
@@ -74,9 +92,7 @@ export function genesToCSV(data: StructuredData, additionalMetadata: { [key: str
     //@ts-ignore
     transformer._implicitHeader = () => {};
 
-    const header = Object.keys(additionalMetadata).length > 0 ?
-        `${data.genes.metadata.trim()}\n${metadataSerializer(additionalMetadata).trim()}` :
-        data.annotations.metadata
+    const header = buildGenesMetadata(data, additionalMetadata);
 
     const input = new Readable({ objectMode: true });
     input._read = () => { };
