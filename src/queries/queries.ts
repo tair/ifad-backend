@@ -3,7 +3,7 @@ import {
   Aspect,
   GeneIndex,
   Annotation,
-  StructuredData,
+  StructuredData, indexAnnotations, makeAnnotationIndex,
 } from "../utils/ingest";
 
 /**
@@ -42,10 +42,7 @@ export type QueryWith = {
   segments: Segment[],
 };
 
-export type QueryResult = {
-  genes: GeneIndex,
-  annotations: Annotation[],
-};
+export type QueryResult = StructuredData;
 
 /**
  * Given the full set of Annotations and Genes and given a QueryOption,
@@ -102,16 +99,27 @@ const queryAll = (dataset: StructuredData): QueryResult => {
   );
 
   // Group all of the genes that appear in the annotations list.
-  const queriedGenes = Object.entries(dataset.genes.index)
+  const geneIndex = Object.entries(dataset.genes.index)
     .filter(([geneId, _]) => geneNamesInAnnotations.has(geneId))
     .reduce((acc, [geneId, gene]) => {
       acc[geneId] = gene;
       return acc;
     }, {});
 
+  const annotationIndex = indexAnnotations(geneIndex, annotations);
+
   return {
-    genes: queriedGenes,
-    annotations,
+    raw: dataset.raw,
+    genes: {
+      metadata: dataset.genes.metadata,
+      records: dataset.genes.records,
+      index: geneIndex,
+    },
+    annotations: {
+      metadata: dataset.annotations.metadata,
+      records: dataset.annotations.records,
+      index: annotationIndex,
+    },
   };
 };
 
@@ -139,14 +147,17 @@ const querySegment = (
   }
 
   const geneIdsArray: string[] = [...geneIds];
-  const genes: GeneIndex = geneIdsArray
+  const geneIndex: GeneIndex = geneIdsArray
     .map(geneId => dataset.genes.index[geneId])
     .reduce((acc, { gene, annotations }) => {
       acc[gene.GeneID] = { gene, annotations };
       return acc;
     }, {});
 
-  const annotations: Annotation[] = geneIdsArray
+  const geneRecords = Object.values(geneIndex)
+    .map(({ gene }) => gene);
+
+  const queriedAnnotations: Annotation[] = geneIdsArray
     .map(geneId => dataset.genes.index[geneId].annotations)
     .flatMap(annotations => [...annotations])
     .filter(annotation => {
@@ -154,7 +165,21 @@ const querySegment = (
         annotation.AnnotationStatus === segment.annotationStatus;
     });
 
-  return { genes, annotations };
+  const annotationIndex = indexAnnotations(geneIndex, queriedAnnotations);
+
+  return {
+    raw: dataset.raw,
+    genes: {
+      metadata: dataset.genes.metadata,
+      records: geneRecords,
+      index: geneIndex,
+    },
+    annotations: {
+      metadata: dataset.annotations.metadata,
+      records: queriedAnnotations,
+      index: annotationIndex,
+    },
+  };
 };
 
 /**
@@ -170,23 +195,38 @@ const queryWithUnion = (
   dataset: StructuredData,
   segments: Segment[],
 ): QueryResult => {
-  let queriedGenes: GeneIndex = {};
-  let queriedAnnotations: Annotation[] = [];
+  let geneIndex: GeneIndex = {};
+  let annotations: Set<Annotation> = new Set();
 
   for (const segment of segments) {
-    const { annotations, genes } = querySegment(dataset, segment);
+    const segmentQueryResults = querySegment(dataset, segment);
 
     // Insert genes from this segment into the queriedGenes
-    Object.entries(genes)
-      .forEach(([geneId, gene]) =>
-        queriedGenes[geneId] = gene);
+    Object.entries(segmentQueryResults.genes.index)
+      .forEach(([geneId, gene]) => geneIndex[geneId] = gene);
 
-    annotations.forEach(annotation => queriedAnnotations.push(annotation));
+    // Add all annotations from this segment into the queriedAnnotations
+    segmentQueryResults.annotations.records.forEach(annotation => annotations.add(annotation));
   }
 
+  const annotationRecords = [...annotations];
+  const geneRecords = Object.values(geneIndex)
+    .map(({ gene }) => gene);
+
+  const annotationIndex = indexAnnotations(geneIndex, annotationRecords);
+
   return {
-    genes: queriedGenes,
-    annotations: queriedAnnotations,
+    raw: dataset.raw,
+    genes: {
+      metadata: dataset.genes.metadata,
+      records: geneRecords,
+      index: geneIndex,
+    },
+    annotations: {
+      metadata: dataset.annotations.metadata,
+      records: annotationRecords,
+      index: annotationIndex,
+    },
   };
 };
 
@@ -202,9 +242,8 @@ const queryWithIntersection = (
   dataset: StructuredData,
   segments: Segment[],
 ): QueryResult => {
-  const queriedGeneMap = Object.entries(dataset.genes.index)
+  const geneIndex: GeneIndex = Object.entries(dataset.genes.index)
     .filter(([_, { annotations }]) => {
-
       const gene_annotations = [...annotations];
 
       // We keep a GeneMap entry if for EVERY query filter given, there is
@@ -223,8 +262,20 @@ const queryWithIntersection = (
       return acc;
     }, {});
 
+  const geneRecords = Object.values(geneIndex)
+    .map(({ gene }) => gene);
+
   return {
-    genes: queriedGeneMap,
-    annotations: [],
+    raw: dataset.raw,
+    genes: {
+      metadata: dataset.genes.metadata,
+      records: geneRecords,
+      index: geneIndex,
+    },
+    annotations: {
+      metadata: dataset.annotations.metadata,
+      records: [],
+      index: makeAnnotationIndex(() => new Set()),
+    }
   };
 };

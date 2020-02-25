@@ -355,7 +355,7 @@ export const makeAnnotationIndex = <T>(initial: () => T): AnnotationIndex<T> => 
 export const indexAnnotations = (
   geneIndex: GeneIndex,
   annotationData: Annotation[]
-): AnnotationIndex<Set<string>> => {
+): AnnotationIndex => {
 
   // Index all annotations based on aspect, categorizing KNOWN_EXP but not KNOWN_OTHER
   const expAndUnknownIndex: AnnotationIndex<Set<string>> = annotationData
