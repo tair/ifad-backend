@@ -2,7 +2,7 @@ version: "3"
 
 services:
   ifad-backend:
-    image: nicholastmosher/ifad-backend:v0.1.7
+    image: nicholastmosher/ifad-backend:v0.1.8
     container_name: "ifad"
     environment:
       GENES_FILE: "/ifad/files/gene-types.txt"
