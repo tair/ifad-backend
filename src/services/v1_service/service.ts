@@ -10,7 +10,7 @@ import {
   StructuredData,
   UnstructuredText
 } from "../../utils/ingest";
-import {annotationsToGAF, genesToCSV} from '../../utils/exporters';
+import {annotationsToGAF, genesToCSV, buildGenesMetadata, buildAnnotationMetadata} from '../../utils/exporters';
 import express from "express";
 
 // TODO use data fetcher rather than files.
@@ -29,24 +29,6 @@ type QueryStatus = "EXP" | "OTHER" | "UNKNOWN" | "UNANNOTATED";
 
 @Path("/api/v1")
 export class V1Service {
-
-  @Path('/genes_metadata')
-  @GET
-  genes_metadata() {
-    const metadata = dataset.genes.metadata;
-    return {
-      metadata
-    }
-  }
-
-  @Path('/annotations_metadata')
-  @GET
-  annotations_metadata() {
-    const metadata = dataset.annotations.metadata;
-    return {
-      metadata
-    }
-  }
 
   @Path("/genes")
   @GET
@@ -92,16 +74,19 @@ export class V1Service {
 
     // TODO include unannotated genes
     const format = validateFormat(maybeFormat);
+
+    const filters_meta = {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")};
+
     switch (format) {
       case "gaf":
-        const gafFileStream = annotationsToGAF(queriedDataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")});
+        const gafFileStream = annotationsToGAF(queriedDataset, filters_meta);
         response.status(200);
         response.setHeader("Content-Type", "application/csv");
         response.setHeader("Content-disposition", "attachment;filename=gene-association.gaf");
         gafFileStream.pipe(response);
         return Return.NoResponse;
       case "gene-csv":
-        const csvFileStream = genesToCSV(queriedDataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")});
+        const csvFileStream = genesToCSV(queriedDataset, filters_meta);
         response.status(200);
         response.setHeader("Content-Type", "application/csv");
         response.setHeader("Content-disposition", "attachment;filename=gene-types.csv");
@@ -111,6 +96,8 @@ export class V1Service {
         return {
           genes: queriedDataset.genes.records,
           annotations: queriedDataset.annotations.records,
+          gene_metadata: buildGenesMetadata(queriedDataset, filters_meta),
+          annotation_metadata: buildAnnotationMetadata(queriedDataset, filters_meta)
         };
     }
   }
