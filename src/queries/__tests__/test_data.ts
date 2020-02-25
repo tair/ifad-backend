@@ -277,14 +277,17 @@ const annotationRecords: Annotation[] = Object.entries(geneIndex)
   .flatMap(([_, value]) => [...value.annotations]);
 
 export const structuredData: StructuredData = {
-  raw: { genesText: "", annotationsText: "" },
+  raw: {
+    genesText: "genes raw data",
+    annotationsText: "annotations raw data",
+  },
   annotations: {
-    metadata: "",
+    metadata: "!annotation metadata",
     records: annotationRecords,
     index: indexAnnotations(geneIndex, annotationRecords),
   },
   genes: {
-    metadata: "",
+    metadata: "!gene metadata",
     records: [],
     index: geneIndex,
   },

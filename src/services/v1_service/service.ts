@@ -70,27 +70,30 @@ export class V1Service {
     }
 
     // TODO include unannotated genes
-    const [queriedGenes, queriedAnnotations] = queryAnnotated(dataset, query);
+    const queriedDataset = queryAnnotated(dataset, query);
 
     // TODO include unannotated genes
     const format = validateFormat(maybeFormat);
     switch (format) {
       case "gaf":
-        const gafFileStream = annotationsToGAF(dataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")});
+        const gafFileStream = annotationsToGAF(queriedDataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")});
         response.status(200);
         response.setHeader("Content-Type", "application/csv");
         response.setHeader("Content-disposition", "attachment;filename=gene-association.gaf");
         gafFileStream.pipe(response);
         return Return.NoResponse;
       case "gene-csv":
-        const csvFileStream = genesToCSV(dataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")});
+        const csvFileStream = genesToCSV(queriedDataset, {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")});
         response.status(200);
         response.setHeader("Content-Type", "application/csv");
         response.setHeader("Content-disposition", "attachment;filename=gene-types.csv");
         csvFileStream.pipe(response);
         return Return.NoResponse;
       case "json":
-        return {annotatedGenes: queriedGenes, annotations: queriedAnnotations, unannotatedGenes: []};
+        return {
+          genes: queriedDataset.genes.records,
+          annotations: queriedDataset.annotations.records,
+        };
     }
   }
 
