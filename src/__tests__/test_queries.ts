@@ -1,6 +1,6 @@
 import { structuredData } from "./test_data";
 import {QueryGetAll, QueryWith, queryAnnotated, QueryOption} from "../queries";
-import {Annotation, GeneIndex, indexAnnotations, StructuredData} from "../../utils/ingest";
+import {Annotation, GeneIndex, indexAnnotations, StructuredData} from "../ingest";
 
 describe("Annotation queries", () => {
 

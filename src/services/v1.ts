@@ -1,7 +1,7 @@
 import {readFileSync} from "fs";
 import {resolve} from "path";
 import {Errors, GET, Path, QueryParam, Return, ContextResponse} from "typescript-rest";
-import {queryAnnotated, QueryOption, Segment, Strategy} from "../../queries/queries";
+import {queryAnnotated, QueryOption, Segment, Strategy} from "../queries";
 import {
   AnnotationStatus,
   Aspect,
@@ -9,14 +9,14 @@ import {
   makeAnnotationIndex,
   StructuredData,
   UnstructuredText
-} from "../../utils/ingest";
-import {annotationsToGAF, genesToCSV, buildGenesMetadata, buildAnnotationMetadata} from '../../utils/exporters';
+} from "../ingest";
+import {annotationsToGAF, genesToCSV, buildGenesMetadata, buildAnnotationMetadata} from '../export';
 import express from "express";
 
 // TODO use data fetcher rather than files.
 console.log("Begin reading data");
-const genesText = readFileSync(process.env["GENES_FILE"] || resolve("src/assets/gene-types.txt")).toString();
-const annotationsText = readFileSync(process.env["ANNOTATIONS_FILE"] || resolve("src/assets/tair.gaf")).toString();
+const genesText = readFileSync(process.env["GENES_FILE"] || resolve("assets/gene-types.txt")).toString();
+const annotationsText = readFileSync(process.env["ANNOTATIONS_FILE"] || resolve("assets/tair.gaf")).toString();
 const unstructuredText: UnstructuredText = {genesText, annotationsText};
 const maybeDataset = ingestData(unstructuredText);
 if (!maybeDataset) throw new Error("failed to parse data");

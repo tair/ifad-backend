@@ -4,7 +4,7 @@ import {
   GeneIndex,
   Annotation,
   StructuredData, indexAnnotations, makeAnnotationIndex,
-} from "../utils/ingest";
+} from "./ingest";
 
 /**
  * A Segment describes exactly one Aspect and one AnnotationStatus.
