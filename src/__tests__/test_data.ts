@@ -1,4 +1,4 @@
-import {GeneIndex, Annotation, StructuredData, indexAnnotations} from "../../utils/ingest";
+import {GeneIndex, Annotation, StructuredData, indexAnnotations} from "../ingest";
 
 const geneIndex: GeneIndex = {
   AT4G18120: {

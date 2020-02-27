@@ -1,5 +1,5 @@
 import parse from "csv-parse/lib/sync";
-import {evidenceCodes} from "../config";
+import {evidenceCodes} from "./config";
 
 /**
  * Indicate which columns in the GAF file will be mapped to what fields on the Annotation object.
