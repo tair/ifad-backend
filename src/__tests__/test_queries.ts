@@ -645,7 +645,44 @@ describe("Annotation queries", () => {
     };
 
     const queryResult = queryAnnotated(structuredData, query);
-    const expectedAnnotations = [];
+    const expectedAnnotations = [
+      { Db: '',
+        DatabaseID: 'locus:1005716736',
+        DbObjectSymbol: '',
+        Invert: false,
+        GOTerm: 'GO:0005576',
+        Reference: 'TAIR:AnalysisReference:501780126',
+        EvidenceCode: 'ISM',
+        AdditionalEvidence: [ '' ],
+        Aspect: 'C',
+        UniqueGeneName: 'Heartstopper',
+        AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+        GeneProductType: 'protein',
+        Taxon: '',
+        Date: "2018-08-31T00:00:00.000Z",
+        AssignedBy: 'TAIR',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
+      { Db: '',
+        DatabaseID: 'locus:1111111111',
+        DbObjectSymbol: '',
+        Invert: false,
+        GOTerm: 'GO:0005576',
+        Reference: 'TAIR:AnalysisReference:501780126',
+        EvidenceCode: 'ISM',
+        AdditionalEvidence: [ '' ],
+        Aspect: 'P',
+        UniqueGeneName: 'Heartstopper',
+        AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+        GeneProductType: 'protein',
+        Taxon: '',
+        Date: "2018-08-31T00:00:00.000Z",
+        AssignedBy: 'TAIR',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
+    ];
     expect(queryResult.genes.index).toEqual(expectedGeneIndex);
     expect(queryResult.annotations.records).toEqual(expectedAnnotations);
   });
