@@ -9,17 +9,17 @@ const column_modifiers: Map<string | null, json2csv.FieldInfo<Annotation>> = new
         value: () => ''
     }],
     ["Invert", {
-        value: (row: Annotation) => row.Invert === true ? "NOT" : ''
+        value: (row: Annotation) => row.get("Invert") ? "NOT" : ''
     }],
     ["AlternativeGeneName", {
-        value: (row: Annotation) => (row.AlternativeGeneName || []).join("|")
+        value: (row: Annotation) => row.get("AlternativeGeneName").join("|")
     }],
     ["AdditionalEvidence", {
-        value: (row: Annotation) => (row.AdditionalEvidence || []).join("|")
+        value: (row: Annotation) => row.get("AdditionalEvidence").join("|")
     }],
     ["Date", {
         // return new Date(Date.parse(`${value.slice(0,4)}-${value.slice(4,6)}-${value.slice(6,8)}`));
-        value: (row) => new Date(row.Date).toJSON().split("T")[0].replace(/\-/g, "")
+        value: (row) => new Date(row.get("Date")).toJSON().split("T")[0].replace(/\-/g, "")
     }]
 ])
 
