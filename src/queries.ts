@@ -1,4 +1,4 @@
-import {List, OrderedSet, Set} from "immutable";
+import {OrderedSet, Set} from "immutable";
 import {
   AnnotationStatus,
   Aspect,
@@ -7,7 +7,7 @@ import {
   StructuredData,
   indexAnnotations,
   Gene,
-  indexGenes, AnnotationIndex, GeneIndexElement,
+  AnnotationIndex, GeneIndexElement,
 } from "./ingest";
 
 /**
@@ -85,7 +85,12 @@ export const queryAnnotated = (
         // Find the union of all of the segments given in the query options. This will
         // include all genes or annotations which match _any_ of the given segments.
         case "union": {
-          return queryWithUnion(dataset, query.segments);
+
+          return query.segments
+            .map(segment => querySegment(dataset, segment))
+            .reduce(union);
+
+          // return queryWithUnion(dataset, query.segments);
         }
 
         // Find the intersection of all of the segments given in the query options.
@@ -93,7 +98,12 @@ export const queryAnnotated = (
         // Annotations can never belong to more than one segment.
         // TODO the intersection of ONE segment should still return annotations
         case "intersection": {
-          return queryWithIntersection(dataset, query.segments);
+
+          return query.segments
+            .map(segment => querySegment(dataset, segment))
+            .reduce(intersect);
+
+          // return queryWithIntersection(dataset, query.segments);
         }
       }
     }
@@ -147,35 +157,32 @@ const querySegment = (
   const aspect = dataset.annotations.index.get(segment.aspect);
 
   const keyPaths = {
-    KNOWN_EXP: ["known", "exp"],
-    KNOWN_OTHER: ["known", "other"],
-    UNKNOWN: ["unknown"],
-    UNANNOTATED: ["unannotated"],
+    KNOWN_EXP: "knownExp",
+    KNOWN_OTHER: "knownOther",
+    UNKNOWN: "unknown",
+    UNANNOTATED: "unannotated",
   };
   const keyPath = keyPaths[segment.annotationStatus];
 
   // Collect all gene IDs that match this segment.
-  const geneIds: Set<string> = aspect.getIn(keyPath);
-
-  const geneIndex: GeneIndex = geneIds.toKeyedSeq()
-    .map((geneId) => dataset.genes.index.get(geneId))
+  const genes: Set<Gene> = aspect.getIn([keyPath]);
+  const geneIndex: GeneIndex = genes.toKeyedSeq()
+    .mapKeys(gene => gene.get("GeneID"))
+    .map((gene, geneId) => dataset.genes.index.get(geneId))
     .flatMap((maybeGene, geneId) => {
       if (maybeGene === undefined) return [];
       return [[geneId, maybeGene]];
     })
     .toMap();
+  const geneRecords = genes.toOrderedSet();
 
-  const geneRecords: OrderedSet<Gene> = geneIndex
-    .map((element) => element.gene)
-    .toOrderedSet();
-
-  const queriedAnnotations: OrderedSet<Annotation> = geneIds
+  const queriedAnnotations: OrderedSet<Annotation> = geneIndex.keySeq()
     .map(geneId => dataset.genes.index.get(geneId))
     .flatMap<Annotation>(maybeGeneIndex => {
       if (maybeGeneIndex === undefined) return [];
-      return maybeGeneIndex.annotations;
+      return maybeGeneIndex.get("annotations");
     })
-    .filter((annotation: Annotation) => {
+    .filter(annotation => {
       return annotation.get("Aspect") === segment.aspect &&
         annotation.get("AnnotationStatus") === segment.annotationStatus;
     })
@@ -227,11 +234,11 @@ const queryWithUnion = (
 
     // Add all annotations from this segment into the queriedAnnotations
     segmentQueryResults.annotations.records
-      .forEach(annotation => annotationRecords.add(annotation));
+      .forEach(annotation => annotationRecords = annotationRecords.add(annotation));
   }
 
   const geneRecords = geneIndex.valueSeq()
-    .map(value => value.gene)
+    .map(value => value.get("gene"))
     .toOrderedSet();
 
   const annotationIndex = indexAnnotations(geneIndex, annotationRecords);
@@ -249,6 +256,37 @@ const queryWithUnion = (
       header: dataset.annotations.header,
       records: annotationRecords,
       index: annotationIndex,
+    },
+  };
+};
+
+const union = (one: StructuredData, two: StructuredData): QueryResult => {
+
+  // Union Gene Index
+  const geneIndexUnion: GeneIndex = one.genes.index.concat(two.genes.index);
+  const geneRecordsUnion: OrderedSet<Gene> = geneIndexUnion.valueSeq()
+    .map(value => value.get("gene"))
+    .toOrderedSet();
+
+  // Union Annotations
+  const annotationRecordUnion: OrderedSet<Annotation> =
+    one.annotations.records.concat(two.annotations.records);
+  const annotationIndexUnion: AnnotationIndex =
+    indexAnnotations(geneIndexUnion, annotationRecordUnion);
+
+  return {
+    raw: one.raw,
+    genes: {
+      metadata: one.genes.metadata,
+      header: one.genes.header,
+      records: geneRecordsUnion,
+      index: geneIndexUnion,
+    },
+    annotations: {
+      metadata: one.annotations.metadata,
+      header: one.annotations.header,
+      records: annotationRecordUnion,
+      index: annotationIndexUnion,
     },
   };
 };
@@ -294,7 +332,7 @@ const queryWithIntersection = (
       .some(name => geneIndex.has(name)));
 
   const geneRecords = geneIndex.valueSeq()
-    .map((indexElement) => indexElement.gene)
+    .map((indexElement) => indexElement.get("gene"))
     .toOrderedSet();
   const annotationIndex = indexAnnotations(geneIndex, annotationRecords);
 
@@ -341,6 +379,43 @@ const queryWithIntersection = (
       header: dataset.annotations.header,
       records: annotationUnion,
       index: annotationIndex,
+    },
+  };
+};
+
+const intersect = (one: StructuredData, two: StructuredData): QueryResult => {
+
+  // Take the intersection of genes
+  const geneIndexIntersection = one.genes.index
+    .filter((_, geneId) => two.genes.index.has(geneId));
+  const geneRecordsIntersection = one.genes.records
+    .filter(gene => geneIndexIntersection.has(gene.get("GeneID")));
+
+  // Take the union of the annotations
+  const annotationRecordUnion: OrderedSet<Annotation> =
+    one.annotations.records.concat(two.annotations.records);
+
+  // Keep only the annotations with genes in the intersection
+  const annotationRecordIntersection: OrderedSet<Annotation> = annotationRecordUnion
+    .filter(item => item.get("GeneNames")
+      .some(name => geneIndexIntersection.has(name)));
+
+  const annotationIndexIntersection: AnnotationIndex =
+    indexAnnotations(geneIndexIntersection, annotationRecordIntersection);
+
+  return {
+    raw: one.raw,
+    genes: {
+      metadata: one.genes.metadata,
+      header: one.genes.header,
+      records: geneRecordsIntersection,
+      index: geneIndexIntersection,
+    },
+    annotations: {
+      metadata: one.annotations.metadata,
+      header: one.annotations.header,
+      records: annotationRecordIntersection,
+      index: annotationIndexIntersection,
     },
   };
 };

@@ -201,8 +201,8 @@ TAIR	locus:2043067	ENOC		GO:0000015	TAIR:AnalysisReference:501756966	IEA	InterPr
     const result = parseAnnotationsText(annotations_file);
     if (!result) fail("annotations should parse");
     const headerExists = result.records.some(annotation =>
-      annotation.Db === "DB" ||
-      annotation.DatabaseID === "DB Object ID");
+      annotation.get("Db") === "DB" ||
+      annotation.get("DatabaseID") === "DB Object ID");
     expect(headerExists).toEqual(false);
   });
 

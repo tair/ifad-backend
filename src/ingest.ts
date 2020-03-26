@@ -367,17 +367,23 @@ export const parseGenesText = (body: string): GeneData | null => {
 };
 
 
+type GeneIndexElementProps = {
+  gene: Gene,
+  annotations: Set<Annotation>,
+}
+
+export type GeneIndexElement = Record<GeneIndexElementProps>;
+export const GeneIndexElement: Record.Factory<GeneIndexElementProps> = Record({
+  gene: Gene(),
+  annotations: Set(),
+} as GeneIndexElementProps, "GeneIndexElement");
+
 /**
  * The GeneIndex type is an object which is keyed by the names of Genes and
  * has values of the Gene which the key represents.
  */
 export type GeneIndex = Map<string, GeneIndexElement>;
 export const GeneIndex = Map;
-
-export type GeneIndexElement = {
-  gene: Gene,
-  annotations: Set<Annotation>,
-}
 
 /**
  * Given the parsed Gene records, index the genes by creating an object whose
@@ -396,7 +402,7 @@ export const indexGenes = (
       .filter((anno: Annotation) => anno.get("GeneNames")
         .includes(gene.get("GeneID")));
 
-    const geneElement = { gene, annotations };
+    const geneElement = GeneIndexElement({ gene, annotations });
     return [gene.get("GeneID"), geneElement];
   });
 
@@ -407,52 +413,33 @@ export const indexGenes = (
 export type AnnotationIndexElementProps<T> = {
   all: T,
   unknown: T,
-  known: {
-    all: T,
-    exp: T,
-    other: T,
-  },
+  knownAll: T,
+  knownExp: T,
+  knownOther: T,
+  // known: {
+  //   all: T,
+  //   exp: T,
+  //   other: T,
+  // },
   unannotated: T,
 };
 
-export type AnnotationIndexElement<T=Set<string>> = Record<AnnotationIndexElementProps<T>>;
-export function AnnotationIndexElement<T=Set<string>>(initial: () => T): Record.Factory<AnnotationIndexElementProps<T>> {
+export type AnnotationIndexElement<T=Set<Gene>> = Record<AnnotationIndexElementProps<T>>;
+export function AnnotationIndexElement<T=Set<Gene>>(initial: () => T): Record.Factory<AnnotationIndexElementProps<T>> {
   return Record({
     all: initial(),
     unknown: initial(),
-    known: {
-      all: initial(),
-      exp: initial(),
-      other: initial(),
-    },
+    knownAll: initial(),
+    knownExp: initial(),
+    knownOther: initial(),
+    // known: {
+    //   all: initial(),
+    //   exp: initial(),
+    //   other: initial(),
+    // },
     unannotated: initial(),
   } as AnnotationIndexElementProps<T>, "AnnotationIndexElement");
 }
-
-// export const AnnotationIndexElement: <T=Set<string>>(_: () => T) => Record.Factory<AnnotationIndexElementProps<T>> =
-//   initial => Record({
-//     all: initial(),
-//     unknown: initial(),
-//     known: {
-//       all: initial(),
-//       exp: initial(),
-//       other: initial(),
-//     },
-//     unannotated: initial(),
-//   } as AnnotationIndexElementProps<any>);
-
-
-
-//   Record({
-//   all: Set(),
-//   unknown: Set(),
-//   known: {
-//     all: Set(),
-//     exp: Set(),
-//     other: Set(),
-//   },
-//   unannotated: Set(),
-// });
 
 /**
  * An AnnotationIndex object contains data which is grouped by the Aspect and the
@@ -466,27 +453,14 @@ export type AnnotationIndexProps<T> = {
   [key in Aspect]: AnnotationIndexElement<T>;
 };
 
-export type AnnotationIndex<T=Set<string>> = Record<AnnotationIndexProps<T>>;
-export function AnnotationIndex<T=Set<string>>(initial: () => T): Record.Factory<AnnotationIndexProps<T>> {
+export type AnnotationIndex<T=Set<Gene>> = Record<AnnotationIndexProps<T>>;
+export function AnnotationIndex<T=Set<Gene>>(initial: () => T): Record.Factory<AnnotationIndexProps<T>> {
   return Record({
     C: AnnotationIndexElement(initial)(),
     F: AnnotationIndexElement(initial)(),
     P: AnnotationIndexElement(initial)(),
   } as AnnotationIndexProps<T>, "AnnotationIndex");
 }
-
-// /**
-//  * This function creates an AnnotationIndex object which is initialized such that every
-//  * key contains a specific initial value. This can be used to create an AnnotationIndex
-//  * which holds empty Sets or which has a 0-count.
-//  *
-//  * @param initial A function which produces an initial value to put at each key.
-//  */
-// export const makeAnnotationIndex = <T>(initial: () => T): AnnotationIndex<T> => ({
-//   P: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}, unannotated: initial()},
-//   F: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}, unannotated: initial()},
-//   C: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}, unannotated: initial()},
-// });
 
 /**
  * Given a GeneIndex and the parsed Annotation data, create an index of those genes
@@ -506,7 +480,7 @@ export const indexAnnotations = (
 
   // // Index all annotations based on aspect, categorizing KNOWN_EXP but not KNOWN_OTHER
   const expAndUnknownIndex: AnnotationIndex = annotationData
-    .reduce((acc, anno: Annotation) => {
+    .reduce((acc: AnnotationIndex, anno: Annotation) => {
     const aspect = anno.get("Aspect");
     const status = anno.get("AnnotationStatus");
     const geneId = anno.get("GeneNames").find(name => geneIndex.has(name));
@@ -514,16 +488,16 @@ export const indexAnnotations = (
 
     const maybeGene = geneIndex.get(geneId);
     if (!maybeGene) return acc;
-    const gene: Gene = maybeGene.gene;
+    const gene: Gene = maybeGene.get("gene");
 
     let ret = acc;
-    ret = ret.setIn([aspect, "all"], gene);
+    ret = ret.updateIn([aspect, "all"], (all: Set<Gene>) => all.add(gene));
     if (status === "UNKNOWN") {
-      ret = ret.setIn([aspect, "unknown"], gene);
+      ret = ret.updateIn([aspect, "unknown"], (unknown: Set<Gene>) => unknown.add(gene));
     } else {
-      ret = ret.setIn([aspect, "known", "all"], gene);
+      ret = ret.updateIn([aspect, "knownAll"], (knownAll: Set<Gene>) => knownAll.add(gene));
       if (status === "KNOWN_EXP") {
-        ret = ret.setIn([aspect, "known", "exp"], gene);
+        ret = ret.updateIn([aspect, "knownExp"], (knownExp: Set<Gene>) => knownExp.add(gene));
       }
     }
 
@@ -533,12 +507,12 @@ export const indexAnnotations = (
   // Calculate known.other by finding all genes that are in KNOWN_OTHER but not KNOWN_EXP
   const expUnknownAndOtherIndex: AnnotationIndex = expAndUnknownIndex.toSeq()
     .reduce((acc: AnnotationIndex, element: AnnotationIndexElement, aspect: Aspect) => {
-      const knownAll: Set<Gene> = element.getIn(["known", "all"]);
+      const knownAll: Set<Gene> = element.getIn(["knownAll"]);
       const knownOther = knownAll.filter(gene => {
-        const knownExp: Set<Gene> = element.getIn(["known", "exp"]);
+        const knownExp: Set<Gene> = element.getIn(["knownExp"]);
         return knownExp.has(gene);
       });
-      return acc.setIn([aspect, "known", "other"], knownOther);
+      return acc.setIn([aspect, "knownOther"], knownOther);
     }, AnnotationIndex(() => Set())());
 
   // For each Gene (G), and for each Aspect (A):
@@ -546,7 +520,8 @@ export const indexAnnotations = (
   // add gene G to the "Unannotated" set for aspect A.
   let fullIndex = expUnknownAndOtherIndex;
   const aspects: Aspect[] = ["P", "C", "F"];
-  geneIndex.valueSeq().forEach(({ gene }: GeneIndexElement) => {
+  geneIndex.valueSeq().forEach((geneElement: GeneIndexElement) => {
+    const gene: Gene = geneElement.get("gene");
     for (const aspect of aspects) {
       const aspectIndex: Set<Gene> = fullIndex.getIn([aspect, "all"]);
       const inAspect = aspectIndex.has(gene);
