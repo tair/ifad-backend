@@ -1,7 +1,7 @@
 import {OrderedSet} from "immutable";
 import { structuredData } from "./test_data";
-import {QueryGetAll, QueryWith, queryAnnotated, QueryOption} from "../queries";
-import {Annotation, Gene, GeneIndex, GeneIndexElement, indexAnnotations, StructuredData} from "../ingest";
+import {QueryGetAll, QueryWith, queryAnnotated, QueryOption, Segment, querySegment} from "../queries";
+import {Annotation, Gene, GeneIndex, GeneIndexElement} from "../ingest";
 
 describe("Annotation queries", () => {
 
@@ -16,6 +16,62 @@ describe("Annotation queries", () => {
     const queryResult = queryAnnotated(structuredData, query);
     expect(queryResult.genes.index).toEqual(expectedGeneIndex);
     expect(queryResult.annotations.records).toEqual(structuredData.annotations.records);
+  });
+
+  it("should query the correct genes and annotations for the single C:KNOWN_EXP segment", () => {
+    const segment: Segment = {
+      aspect: "C",
+      annotationStatus: "KNOWN_EXP",
+    };
+
+    const expectedGeneIndex: GeneIndex = GeneIndex({
+      AT4G18120: GeneIndexElement({
+        gene: Gene({
+          GeneID: "AT4G18120",
+          GeneProductType: "pseudogene"
+        }),
+        annotations: OrderedSet([
+          Annotation({
+            Db: '',
+            DatabaseID: 'locus:2117706',
+            DbObjectSymbol: '',
+            Invert: false,
+            GOTerm: 'GO:0005634',
+            Reference: 'TAIR:Publication:501713238|PMID:15356386',
+            EvidenceCode: 'IDA',
+            AdditionalEvidence: OrderedSet([ '' ]),
+            Aspect: 'C',
+            GeneNames: OrderedSet([
+              'AT4G18120',
+              'AML3',
+              'ML3',
+              'MEI2-like 3',
+              'F15J5.90',
+              'F15J5_90'
+            ]),
+            UniqueGeneName: 'AT4G18120',
+            AlternativeGeneName: OrderedSet([
+              'AT4G18120',
+              'AML3',
+              'ML3',
+              'MEI2-like 3',
+              'F15J5.90',
+              'F15J5_90'
+            ]),
+            GeneProductType: 'pseudogene',
+            Taxon: '',
+            Date: "2006-05-19T00:00:00.000Z",
+            AssignedBy: 'TAIR',
+            AnnotationStatus: 'KNOWN_EXP',
+            AnnotationExtension: '',
+            GeneProductFormID: '' })
+        ])
+      }),
+    });
+
+    const queryResult = querySegment(structuredData, segment);
+    const actualGeneIndex = queryResult.genes.index;
+    expect(actualGeneIndex).toEqual(expectedGeneIndex);
   });
 
   it("should choose the proper subset for FilterWith:union for C:KNOWN_EXP", () => {
@@ -233,8 +289,10 @@ describe("Annotation queries", () => {
     ]);
 
     const queryResult = queryAnnotated(structuredData, query);
-    expect(queryResult.genes.index).toEqual(expectedGeneIndex);
-    expect(queryResult.annotations.records).toEqual(expectedAnnotations);
+    expect(queryResult.genes.index.toJS()).toEqual(expectedGeneIndex.toJS());
+
+    // Note: convert from OrderedSet to Set when comparing equality
+    expect(queryResult.annotations.records.toSet()).toEqual(expectedAnnotations.toSet());
   });
 
   it("should return the union of results when using FilterWith:union for C:KNOWN_OTHER,P:KNOWN_OTHER", () => {
@@ -657,7 +715,9 @@ describe("Annotation queries", () => {
     const expectedAnnotationsSet = expectedAnnotations;
 
     expect(genes.toJS()).toEqual(expectedGeneIndex.toJS());
-    expect(outputAnnotationsSet.toJS()).toEqual(expectedAnnotationsSet.toJS());
+
+    // Note: convert from OrderedSet to Set when comparing equality
+    expect(outputAnnotationsSet.toSet()).toEqual(expectedAnnotationsSet.toSet());
   });
 
   it("should find a single gene for QueryWith:intersection for C:KNOWN_OTHER,P:KNOWN_OTHER", () => {

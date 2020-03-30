@@ -1,7 +1,7 @@
 import {OrderedSet} from "immutable";
 import {GeneIndex, Annotation, StructuredData, indexAnnotations, Gene, GeneIndexElement} from "../ingest";
 
-const geneIndex: GeneIndex = GeneIndex({
+const partialGeneIndex: GeneIndex = GeneIndex({
   AT4G18120: GeneIndexElement({
     gene: Gene({
       GeneID: "AT4G18120",
@@ -318,9 +318,11 @@ const geneIndex: GeneIndex = GeneIndex({
   }),
 });
 
-const annotationRecords: OrderedSet<Annotation> = geneIndex.valueSeq()
+const annotationRecords: OrderedSet<Annotation> = partialGeneIndex.valueSeq()
   .flatMap((value) => value.get("annotations"))
   .toOrderedSet();
+
+const { annotationIndex, geneIndex } = indexAnnotations(partialGeneIndex, annotationRecords);
 
 export const structuredData: StructuredData = {
   raw: {
@@ -331,7 +333,7 @@ export const structuredData: StructuredData = {
     metadata: "!annotation metadata",
     header: "Column A, Column B, Column C",
     records: annotationRecords,
-    index: indexAnnotations(geneIndex, annotationRecords),
+    index: annotationIndex,
   },
   genes: {
     metadata: "!gene metadata",
@@ -342,9 +344,13 @@ export const structuredData: StructuredData = {
 };
 
 describe("the test data", () => {
-  it("should have the same number of annotations in the GeneMap and the annotations list", () => {
+  it("should have the same number of annotations in the GeneIndex and the annotations list", () => {
     const annotationCountInGeneMap = geneIndex.valueSeq()
       .flatMap(value => value.get("annotations")).toOrderedSet().size;
     expect(annotationCountInGeneMap).toEqual(annotationRecords.size);
+  });
+
+  it("should produce the correct GeneIndex", () => {
+    expect(geneIndex).toEqual(partialGeneIndex);
   });
 });

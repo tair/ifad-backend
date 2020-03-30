@@ -128,8 +128,6 @@ export const parseAnnotationsData = (input: string): OrderedSet<Annotation> | nu
         return value === "NOT";
       } else if (context.column === "AlternativeGeneName" || context.column === "AdditionalEvidence") {
         return OrderedSet(value.split("|"));
-      } else if (context.column === "Date") {
-        return new Date(Date.parse(`${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`));
       } else {
         return value;
       }
@@ -390,23 +388,15 @@ export const GeneIndex = Map;
  * keys are the Gene names and whose values are the Genes themselves.
  *
  * @param geneData The parsed Gene records.
- * @param annotationRecords The parsed Annotation records.
  */
 export const indexGenes = (
   geneData: Set<Gene>,
-  annotationRecords: Set<Annotation> = Set(),
 ): GeneIndex => {
 
-  const iter: Iterable<[string, GeneIndexElement]> = geneData.map((gene: Gene) => {
-    const annotations = annotationRecords
-      .filter((anno: Annotation) => anno.get("GeneNames")
-        .includes(gene.get("GeneID")));
-
-    const geneElement = GeneIndexElement({ gene, annotations });
-    return [gene.get("GeneID"), geneElement];
-  });
-
-  return Map(iter);
+  return geneData.toKeyedSeq()
+    .mapKeys(gene => gene.get("GeneID"))
+    .map(gene => GeneIndexElement({ gene }))
+    .toMap();
 };
 
 
@@ -416,11 +406,6 @@ export type AnnotationIndexElementProps<T> = {
   knownAll: T,
   knownExp: T,
   knownOther: T,
-  // known: {
-  //   all: T,
-  //   exp: T,
-  //   other: T,
-  // },
   unannotated: T,
 };
 
@@ -432,11 +417,6 @@ export function AnnotationIndexElement<T=Set<Gene>>(initial: () => T): Record.Fa
     knownAll: initial(),
     knownExp: initial(),
     knownOther: initial(),
-    // known: {
-    //   all: initial(),
-    //   exp: initial(),
-    //   other: initial(),
-    // },
     unannotated: initial(),
   } as AnnotationIndexElementProps<T>, "AnnotationIndexElement");
 }
@@ -462,6 +442,11 @@ export function AnnotationIndex<T=Set<Gene>>(initial: () => T): Record.Factory<A
   } as AnnotationIndexProps<T>, "AnnotationIndex");
 }
 
+type FinalIndexes = {
+  geneIndex: GeneIndex,
+  annotationIndex: AnnotationIndex,
+};
+
 /**
  * Given a GeneIndex and the parsed Annotation data, create an index of those genes
  * that groups them based on which Aspect and Annotation Status they belong to.
@@ -470,34 +455,38 @@ export function AnnotationIndex<T=Set<Gene>>(initial: () => T): Record.Factory<A
  * Annotation belongs to and add that annotation to the "annotations" list in the
  * GeneIndex for that gene.
  *
- * @param geneIndex The index of gene names to Gene objects.
+ * @param partialGeneIndex The index of gene names to Gene objects.
  * @param annotationData The parsed annotation data.
  */
 export const indexAnnotations = (
-  geneIndex: GeneIndex,
-  annotationData: Set<Annotation>
-): AnnotationIndex => {
+  partialGeneIndex: GeneIndex,
+  annotationData: Set<Annotation>,
+): FinalIndexes => {
+  let geneIndex: GeneIndex = partialGeneIndex;
 
   // // Index all annotations based on aspect, categorizing KNOWN_EXP but not KNOWN_OTHER
   const expAndUnknownIndex: AnnotationIndex = annotationData
     .reduce((acc: AnnotationIndex, anno: Annotation) => {
     const aspect = anno.get("Aspect");
     const status = anno.get("AnnotationStatus");
-    const geneId = anno.get("GeneNames").find(name => geneIndex.has(name));
+    const geneId = anno.get("GeneNames").find(name => partialGeneIndex.has(name));
     if (!geneId) return acc;
 
-    const maybeGene = geneIndex.get(geneId);
+    const maybeGene = partialGeneIndex.get(geneId);
     if (!maybeGene) return acc;
     const gene: Gene = maybeGene.get("gene");
 
+    // Add this annotation to the GeneIndex under it's gene
+    geneIndex = geneIndex.updateIn([geneId, "annotations"], annos => annos.add(anno));
+
     let ret = acc;
-    ret = ret.updateIn([aspect, "all"], (all: Set<Gene>) => all.add(gene));
+    ret = ret.updateIn([aspect, "all"], all => all.add(gene));
     if (status === "UNKNOWN") {
-      ret = ret.updateIn([aspect, "unknown"], (unknown: Set<Gene>) => unknown.add(gene));
+      ret = ret.updateIn([aspect, "unknown"], unknown => unknown.add(gene));
     } else {
-      ret = ret.updateIn([aspect, "knownAll"], (knownAll: Set<Gene>) => knownAll.add(gene));
+      ret = ret.updateIn([aspect, "knownAll"], knownAll => knownAll.add(gene));
       if (status === "KNOWN_EXP") {
-        ret = ret.updateIn([aspect, "knownExp"], (knownExp: Set<Gene>) => knownExp.add(gene));
+        ret = ret.updateIn([aspect, "knownExp"], knownExp => knownExp.add(gene));
       }
     }
 
@@ -510,28 +499,33 @@ export const indexAnnotations = (
       const knownAll: Set<Gene> = element.getIn(["knownAll"]);
       const knownOther = knownAll.filter(gene => {
         const knownExp: Set<Gene> = element.getIn(["knownExp"]);
-        return knownExp.has(gene);
+        return !knownExp.has(gene);
       });
-      return acc.setIn([aspect, "knownOther"], knownOther);
+      return acc
+        .set(aspect, element)
+        .setIn([aspect, "knownOther"], knownOther);
     }, AnnotationIndex(() => Set())());
 
   // For each Gene (G), and for each Aspect (A):
   // If gene G does not appear in the annotations for aspect A, then
   // add gene G to the "Unannotated" set for aspect A.
-  let fullIndex = expUnknownAndOtherIndex;
+  let annotationIndex = expUnknownAndOtherIndex;
   const aspects: Aspect[] = ["P", "C", "F"];
-  geneIndex.valueSeq().forEach((geneElement: GeneIndexElement) => {
+  geneIndex.valueSeq().forEach(geneElement => {
     const gene: Gene = geneElement.get("gene");
     for (const aspect of aspects) {
-      const aspectIndex: Set<Gene> = fullIndex.getIn([aspect, "all"]);
+      const aspectIndex: Set<Gene> = annotationIndex.getIn([aspect, "all"]);
       const inAspect = aspectIndex.has(gene);
       if (!inAspect) {
-        fullIndex = fullIndex.updateIn([aspect, "unannotated"], (genes: Set<Gene>) => genes.add(gene))
+        annotationIndex = annotationIndex.updateIn([aspect, "unannotated"], genes => genes.add(gene));
       }
     }
   });
 
-  return fullIndex;
+  return {
+    geneIndex,
+    annotationIndex,
+  };
 };
 
 /**
@@ -590,10 +584,10 @@ export const ingestData = (raw: UnstructuredText): StructuredData | null => {
   if (!annotationData) return null;
 
   // Index gene data
-  const geneIndex = indexGenes(geneData.records);
+  const partialGeneIndex = indexGenes(geneData.records);
 
-  // Index annotation data
-  const annotationIndex = indexAnnotations(geneIndex, annotationData.records);
+  // Index annotation data and get finalized geneIndex
+  const { geneIndex, annotationIndex } = indexAnnotations(partialGeneIndex, annotationData.records);
 
   const genes: StructuredGenes = {
     metadata: geneData.metadata,

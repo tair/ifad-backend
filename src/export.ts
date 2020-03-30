@@ -17,10 +17,6 @@ const column_modifiers: Map<string | null, json2csv.FieldInfo<Annotation>> = new
     ["AdditionalEvidence", {
         value: (row: Annotation) => row.get("AdditionalEvidence").join("|")
     }],
-    ["Date", {
-        // return new Date(Date.parse(`${value.slice(0,4)}-${value.slice(4,6)}-${value.slice(6,8)}`));
-        value: (row) => new Date(row.get("Date")).toJSON().split("T")[0].replace(/\-/g, "")
-    }]
 ])
 
 export const metadataSerializer = (metadata: { [key: string]: string }) => Object.entries(metadata)
