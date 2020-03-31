@@ -113,30 +113,16 @@ export class V1Service {
         const allSize = indexElement.get("all").size;
         return index
           .setIn([aspect, "all"], allSize)
-          .setIn([aspect, "known", "all"], indexElement.getIn(["known", "all"]).size)
-          .setIn([aspect, "known", "exp"], indexElement.getIn(["known", "exp"]).size)
-          .setIn([aspect, "known", "other"], indexElement.getIn(["known", "other"]).size)
-          .setIn([aspect, "unknown"], indexElement.getIn(["unknown"]).size)
+          .setIn([aspect, "knownAll"], indexElement.get("knownAll").size)
+          .setIn([aspect, "knownExp"], indexElement.get("knownExp").size)
+          .setIn([aspect, "knownOther"], indexElement.get("knownOther").size)
+          .setIn([aspect, "unknown"], indexElement.get("unknown").size)
           .setIn([aspect, "unannotated"], totalGeneCount - allSize);
       }, AnnotationIndex<number>(() => 0)());
 
     const annotationCountsResult = annotationIndexCounts.toJS();
     annotationCountsResult["totalGenes"] = totalGeneCount;
     return annotationCountsResult;
-
-    // const result = Object.entries(dataset.annotations.index)
-    //   .reduce((acc, [aspect, {all, known: {all: known_all, exp, other}, unknown}]) => {
-    //     acc[aspect].all = all.size;
-    //     acc[aspect].known.all = known_all.size;
-    //     acc[aspect].known.exp = exp.size;
-    //     acc[aspect].known.other = other.size;
-    //     acc[aspect].unknown = unknown.size;
-    //     acc[aspect].unannotated = totalGeneCount - all.size;
-    //     return acc;
-    //   }, makeAnnotationIndex(() => 0));
-
-    // result["totalGenes"] = totalGeneCount;
-    // return result;
   }
 }
 
