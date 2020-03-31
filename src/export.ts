@@ -76,7 +76,7 @@ export function buildGenesMetadata(data: StructuredData, additionalMetadata: { [
 }
 
 export function genesToCSV(data: StructuredData, additionalMetadata: { [key: string]: string } = {}) {
-    const inputs = Object.values(data.genes.index).map(val => val.gene);
+    const inputs = data.genes.index.map(geneElement => geneElement.get("gene"));
 
     const transformer = new Transform({
         fields: GENE_COLUMNS,
@@ -96,12 +96,9 @@ export function genesToCSV(data: StructuredData, additionalMetadata: { [key: str
     const input = new Readable({ objectMode: true });
     input._read = () => { };
 
-    for (const record of inputs) {
-        input.push(record)
-    }
+    inputs.forEach(gene => input.push(gene));
     input.push(null);
-
-    input.pipe(transformer)
+    input.pipe(transformer);
 
     return combine()
         .append(header+"\n")
