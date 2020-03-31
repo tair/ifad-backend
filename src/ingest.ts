@@ -1,5 +1,6 @@
 import parse from "csv-parse/lib/sync";
 import {evidenceCodes} from "./config";
+import {Map, OrderedSet, Record, Set} from "immutable";
 
 /**
  * Indicate which columns in the GAF file will be mapped to what fields on the Annotation object.
@@ -59,7 +60,7 @@ export type AnnotationStatus = "KNOWN_EXP" | "KNOWN_OTHER" | "UNKNOWN" | "UNANNO
 /**
  * The structured form of the data read from an annotations file (e.g. tair.gaf).
  */
-export type Annotation = {
+type AnnotationProps = {
   Db: string,
   DatabaseID: string,
   DbObjectSymbol: string,
@@ -67,11 +68,12 @@ export type Annotation = {
   GOTerm: string,
   Reference: string,
   EvidenceCode: string,
-  AdditionalEvidence: string[],
+  AdditionalEvidence: OrderedSet<string>,
   Aspect: Aspect,
   AnnotationStatus: AnnotationStatus,
+  GeneNames: Set<string>,
   UniqueGeneName: string,
-  AlternativeGeneName: string[],
+  AlternativeGeneName: OrderedSet<string>,
   GeneProductType: string,
   Taxon: string,
   Date: string,
@@ -80,21 +82,43 @@ export type Annotation = {
   GeneProductFormID: string,
 };
 
+export type Annotation = Record<AnnotationProps>;
+export const Annotation: Record.Factory<AnnotationProps> = Record({
+  Db: "",
+  DatabaseID: "",
+  DbObjectSymbol: "",
+  Invert: false,
+  GOTerm: "",
+  Reference: "",
+  EvidenceCode: "",
+  AdditionalEvidence: OrderedSet(),
+  Aspect: "P" as Aspect,
+  AnnotationStatus: "KNOWN_EXP" as AnnotationStatus,
+  GeneNames: Set(),
+  UniqueGeneName: "",
+  AlternativeGeneName: OrderedSet(),
+  GeneProductType: "",
+  Taxon: "",
+  Date: "",
+  AssignedBy: "",
+  AnnotationExtension: "",
+  GeneProductFormID: "",
+} as AnnotationProps, "Annotation");
+
 /**
  * Given the raw text of the annotations section of an annotations file,
  * parse the annotations text and return the structured annotations data.
  *
  * @param input The raw annotations text to be parsed.
  */
-export const parseAnnotationsData = (input: string): Annotation[] | null => {
-
+export const parseAnnotationsData = (input: string): OrderedSet<Annotation> | null => {
   const evidenceCodeToAnnotationStatus = (evidenceCode: string): AnnotationStatus => {
     if (evidenceCodes.UNKNOWN.includes(evidenceCode)) return "UNKNOWN";
     if (evidenceCodes.KNOWN_EXPERIMENTAL.includes(evidenceCode)) return "KNOWN_EXP";
     return "KNOWN_OTHER";
   };
 
-  return parse(input, {
+  const annotations: AnnotationProps[] = parse(input, {
     columns: ANNOTATION_COLUMNS,
     skip_empty_lines: true,
     delimiter: "\t",
@@ -103,9 +127,7 @@ export const parseAnnotationsData = (input: string): Annotation[] | null => {
       if (context.column === "Invert") {
         return value === "NOT";
       } else if (context.column === "AlternativeGeneName" || context.column === "AdditionalEvidence") {
-        return value.split("|");
-      } else if (context.column === "Date") {
-        return new Date(Date.parse(`${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`));
+        return OrderedSet(value.split("|"));
       } else {
         return value;
       }
@@ -113,18 +135,27 @@ export const parseAnnotationsData = (input: string): Annotation[] | null => {
   })
     .map(item => ({
       ...item,
+      GeneNames: Set([item.UniqueGeneName, ...item.AlternativeGeneName]),
       AnnotationStatus: evidenceCodeToAnnotationStatus(item.EvidenceCode)
     }));
+
+  return OrderedSet(annotations.map(annotationProps => Annotation(annotationProps)));
 };
 
 
 /**
  * The structured form of the data read from a genes file (e.g. gene-types.txt).
  */
-export type Gene = {
+type GeneProps = {
   GeneID: string,
   GeneProductType: string,
 };
+
+export type Gene = Record<GeneProps>;
+export const Gene: Record.Factory<GeneProps> = Record({
+  GeneID: "",
+  GeneProductType: "",
+} as GeneProps, "Gene");
 
 /**
  * Given the raw text of the data in the genes file (excluding headers),
@@ -132,9 +163,8 @@ export type Gene = {
  *
  * @param input The raw genes text to be parsed.
  */
-export const parseGenesData = (input: string): Gene[] | null => {
-
-  return parse(input, {
+export const parseGenesData = (input: string): OrderedSet<Gene> | null => {
+  const genes: GeneProps[] = parse(input, {
     columns: GENE_COLUMNS,
     skip_empty_lines: true,
     skip_lines_with_error: true,
@@ -142,6 +172,8 @@ export const parseGenesData = (input: string): Gene[] | null => {
     relax: true,
     cast: true,
   });
+
+  return OrderedSet(genes.map(geneProp => Gene(geneProp)));
 };
 
 
@@ -256,7 +288,7 @@ type AnnotationMetadata = string;
 type AnnotationData = {
   metadata: AnnotationMetadata,
   header: string,
-  records: Annotation[],
+  records: OrderedSet<Annotation>,
 };
 
 /**
@@ -301,7 +333,7 @@ type GeneMetadata = string;
 type GeneData = {
   metadata: GeneMetadata,
   header: string,
-  records: Gene[],
+  records: OrderedSet<Gene>,
 };
 
 /**
@@ -333,16 +365,23 @@ export const parseGenesText = (body: string): GeneData | null => {
 };
 
 
+type GeneIndexElementProps = {
+  gene: Gene,
+  annotations: Set<Annotation>,
+}
+
+export type GeneIndexElement = Record<GeneIndexElementProps>;
+export const GeneIndexElement: Record.Factory<GeneIndexElementProps> = Record({
+  gene: Gene(),
+  annotations: Set(),
+} as GeneIndexElementProps, "GeneIndexElement");
+
 /**
  * The GeneIndex type is an object which is keyed by the names of Genes and
  * has values of the Gene which the key represents.
  */
-export type GeneIndex = {
-  [key: string]: {
-    gene: Gene,
-    annotations: Set<Annotation>,
-  }
-};
+export type GeneIndex = Map<string, GeneIndexElement>;
+export const GeneIndex = Map;
 
 /**
  * Given the parsed Gene records, index the genes by creating an object whose
@@ -350,16 +389,37 @@ export type GeneIndex = {
  *
  * @param geneData The parsed Gene records.
  */
-const indexGenes = (geneData: Gene[]): GeneIndex => {
-  return geneData.reduce((acc, current) => {
-    acc[current.GeneID] = {
-      gene: current,
-      annotations: new Set<Annotation>(),
-    };
-    return acc;
-  }, {});
+export const indexGenes = (
+  geneData: Set<Gene>,
+): GeneIndex => {
+
+  return geneData.toKeyedSeq()
+    .mapKeys(gene => gene.get("GeneID"))
+    .map(gene => GeneIndexElement({ gene }))
+    .toMap();
 };
 
+
+export type AnnotationIndexElementProps<T> = {
+  all: T,
+  unknown: T,
+  knownAll: T,
+  knownExp: T,
+  knownOther: T,
+  unannotated: T,
+};
+
+export type AnnotationIndexElement<T=Set<Gene>> = Record<AnnotationIndexElementProps<T>>;
+export function AnnotationIndexElement<T=Set<Gene>>(initial: () => T): Record.Factory<AnnotationIndexElementProps<T>> {
+  return Record({
+    all: initial(),
+    unknown: initial(),
+    knownAll: initial(),
+    knownExp: initial(),
+    knownOther: initial(),
+    unannotated: initial(),
+  } as AnnotationIndexElementProps<T>, "AnnotationIndexElement");
+}
 
 /**
  * An AnnotationIndex object contains data which is grouped by the Aspect and the
@@ -369,31 +429,23 @@ const indexGenes = (geneData: Gene[]): GeneIndex => {
  * the given Aspect and AnnotationStatus, whereas an AnnotationIndex<number> can be
  * used to hold the count of how many genes belong to a given Aspect and AnnotationStatus.
  */
-export type AnnotationIndex<T=Set<string>> = {
-  [key in Aspect]: {
-    all: T,
-    unknown: T,
-    known: {
-      all: T,
-      exp: T,
-      other: T,
-    },
-    unannotated: T,
-  }
+export type AnnotationIndexProps<T> = {
+  [key in Aspect]: AnnotationIndexElement<T>;
 };
 
-/**
- * This function creates an AnnotationIndex object which is initialized such that every
- * key contains a specific initial value. This can be used to create an AnnotationIndex
- * which holds empty Sets or which has a 0-count.
- *
- * @param initial A function which produces an initial value to put at each key.
- */
-export const makeAnnotationIndex = <T>(initial: () => T): AnnotationIndex<T> => ({
-  P: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}, unannotated: initial()},
-  F: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}, unannotated: initial()},
-  C: {all: initial(), unknown: initial(), known: {all: initial(), exp: initial(), other: initial()}, unannotated: initial()},
-});
+export type AnnotationIndex<T=Set<Gene>> = Record<AnnotationIndexProps<T>>;
+export function AnnotationIndex<T=Set<Gene>>(initial: () => T): Record.Factory<AnnotationIndexProps<T>> {
+  return Record({
+    C: AnnotationIndexElement(initial)(),
+    F: AnnotationIndexElement(initial)(),
+    P: AnnotationIndexElement(initial)(),
+  } as AnnotationIndexProps<T>, "AnnotationIndex");
+}
+
+type FinalIndexes = {
+  geneIndex: GeneIndex,
+  annotationIndex: AnnotationIndex,
+};
 
 /**
  * Given a GeneIndex and the parsed Annotation data, create an index of those genes
@@ -403,64 +455,77 @@ export const makeAnnotationIndex = <T>(initial: () => T): AnnotationIndex<T> => 
  * Annotation belongs to and add that annotation to the "annotations" list in the
  * GeneIndex for that gene.
  *
- * @param geneIndex The index of gene names to Gene objects.
+ * @param partialGeneIndex The index of gene names to Gene objects.
  * @param annotationData The parsed annotation data.
  */
 export const indexAnnotations = (
-  geneIndex: GeneIndex,
-  annotationData: Annotation[]
-): AnnotationIndex => {
+  partialGeneIndex: GeneIndex,
+  annotationData: Set<Annotation>,
+): FinalIndexes => {
+  let geneIndex: GeneIndex = partialGeneIndex;
 
-  // Index all annotations based on aspect, categorizing KNOWN_EXP but not KNOWN_OTHER
-  const expAndUnknownIndex: AnnotationIndex<Set<string>> = annotationData
-    .reduce((acc, annotation) => {
-      const aspect = annotation.Aspect;
-      const annotationStatus = annotation.AnnotationStatus;
-      const geneId = [annotation.UniqueGeneName, ...annotation.AlternativeGeneName]
-        .find(name => !!geneIndex[name]);
-      if (!geneId) return acc;
+  // // Index all annotations based on aspect, categorizing KNOWN_EXP but not KNOWN_OTHER
+  const expAndUnknownIndex: AnnotationIndex = annotationData
+    .reduce((acc: AnnotationIndex, anno: Annotation) => {
+    const aspect = anno.get("Aspect");
+    const status = anno.get("AnnotationStatus");
+    const geneId = anno.get("GeneNames").find(name => partialGeneIndex.has(name));
+    if (!geneId) return acc;
 
-      const {gene, annotations} = geneIndex[geneId];
+    const maybeGene = partialGeneIndex.get(geneId);
+    if (!maybeGene) return acc;
+    const gene: Gene = maybeGene.get("gene");
 
-      // Add the current annotation to the list for the gene it belongs to.
-      annotations.add(annotation);
+    // Add this annotation to the GeneIndex under it's gene
+    geneIndex = geneIndex.updateIn([geneId, "annotations"], annos => annos.add(anno));
 
-      // Add gene to the proper index in the AnnotationIndex
-      acc[aspect].all.add(gene.GeneID);
-      if (annotationStatus === "UNKNOWN") {
-        acc[aspect].unknown.add(gene.GeneID);
-      } else {
-        acc[aspect].known.all.add(gene.GeneID);
-        if (annotationStatus === "KNOWN_EXP") {
-          acc[aspect].known.exp.add(gene.GeneID);
-        }
+    let ret = acc;
+    ret = ret.updateIn([aspect, "all"], all => all.add(gene));
+    if (status === "UNKNOWN") {
+      ret = ret.updateIn([aspect, "unknown"], unknown => unknown.add(gene));
+    } else {
+      ret = ret.updateIn([aspect, "knownAll"], knownAll => knownAll.add(gene));
+      if (status === "KNOWN_EXP") {
+        ret = ret.updateIn([aspect, "knownExp"], knownExp => knownExp.add(gene));
       }
-      return acc;
-    }, makeAnnotationIndex<Set<string>>(() => new Set()));
+    }
+
+    return ret;
+  }, AnnotationIndex(() => Set())());
 
   // Calculate known.other by finding all genes that are in KNOWN_OTHER but not KNOWN_EXP
-  const expUnknownAndOtherIndex: AnnotationIndex<Set<string>> =  Object.entries(expAndUnknownIndex)
-    .reduce((acc, [aspect, index]) => {
-      index.known.other = new Set([...index.known.all].filter(gene => !index.known.exp.has(gene)));
-      acc[aspect] = index;
-      return acc;
-    }, makeAnnotationIndex<Set<string>>(() => new Set()));
+  const expUnknownAndOtherIndex: AnnotationIndex = expAndUnknownIndex.toSeq()
+    .reduce((acc: AnnotationIndex, element: AnnotationIndexElement, aspect: Aspect) => {
+      const knownAll: Set<Gene> = element.getIn(["knownAll"]);
+      const knownOther = knownAll.filter(gene => {
+        const knownExp: Set<Gene> = element.getIn(["knownExp"]);
+        return !knownExp.has(gene);
+      });
+      return acc
+        .set(aspect, element)
+        .setIn([aspect, "knownOther"], knownOther);
+    }, AnnotationIndex(() => Set())());
 
   // For each Gene (G), and for each Aspect (A):
   // If gene G does not appear in the annotations for aspect A, then
   // add gene G to the "Unannotated" set for aspect A.
-  const fullIndex = expUnknownAndOtherIndex;
+  let annotationIndex = expUnknownAndOtherIndex;
   const aspects: Aspect[] = ["P", "C", "F"];
-  Object.keys(geneIndex).forEach((gene: string) => {
+  geneIndex.valueSeq().forEach(geneElement => {
+    const gene: Gene = geneElement.get("gene");
     for (const aspect of aspects) {
-      const inAspect = fullIndex[aspect].all.has(gene);
+      const aspectIndex: Set<Gene> = annotationIndex.getIn([aspect, "all"]);
+      const inAspect = aspectIndex.has(gene);
       if (!inAspect) {
-        fullIndex[aspect].unannotated.add(gene);
+        annotationIndex = annotationIndex.updateIn([aspect, "unannotated"], genes => genes.add(gene));
       }
     }
   });
 
-  return fullIndex;
+  return {
+    geneIndex,
+    annotationIndex,
+  };
 };
 
 /**
@@ -478,7 +543,7 @@ export type UnstructuredText = {
 export type StructuredGenes = {
   metadata: GeneMetadata,
   header: string,
-  records: Gene[],
+  records: OrderedSet<Gene>,
   index: GeneIndex,
 };
 
@@ -489,7 +554,7 @@ export type StructuredGenes = {
 export type StructuredAnnotations = {
   metadata: AnnotationMetadata,
   header: string,
-  records: Annotation[],
+  records: OrderedSet<Annotation>,
   index: AnnotationIndex,
 };
 
@@ -510,15 +575,19 @@ export type StructuredData = {
  * @param raw The raw contents of the genes and annotations files.
  */
 export const ingestData = (raw: UnstructuredText): StructuredData | null => {
-  // Parse and index Gene data
+  // Parse Gene data
   const geneData = parseGenesText(raw.genesText);
   if (!geneData) return null;
-  const geneIndex = indexGenes(geneData.records);
 
-  // Parse and index Annotation data
+  // Parse Annotation data
   const annotationData = parseAnnotationsText(raw.annotationsText);
   if (!annotationData) return null;
-  const annotationIndex = indexAnnotations(geneIndex, annotationData.records);
+
+  // Index gene data
+  const partialGeneIndex = indexGenes(geneData.records);
+
+  // Index annotation data and get finalized geneIndex
+  const { geneIndex, annotationIndex } = indexAnnotations(partialGeneIndex, annotationData.records);
 
   const genes: StructuredGenes = {
     metadata: geneData.metadata,

@@ -3,10 +3,11 @@ import {resolve} from "path";
 import {Errors, GET, Path, QueryParam, Return, ContextResponse} from "typescript-rest";
 import {queryAnnotated, QueryOption, Segment, Strategy} from "../queries";
 import {
+  AnnotationIndex,
+  AnnotationIndexElement,
   AnnotationStatus,
   Aspect,
   ingestData,
-  makeAnnotationIndex,
   StructuredData,
   UnstructuredText
 } from "../ingest";
@@ -105,21 +106,23 @@ export class V1Service {
   @Path("/wgs_segments")
   @GET
   get_wgs() {
-    const totalGeneCount = Object.keys(dataset.genes.index).length;
+    const totalGeneCount = dataset.genes.index.size;
 
-    const result = Object.entries(dataset.annotations.index)
-      .reduce((acc, [aspect, {all, known: {all: known_all, exp, other}, unknown}]) => {
-        acc[aspect].all = all.size;
-        acc[aspect].known.all = known_all.size;
-        acc[aspect].known.exp = exp.size;
-        acc[aspect].known.other = other.size;
-        acc[aspect].unknown = unknown.size;
-        acc[aspect].unannotated = totalGeneCount - all.size;
-        return acc;
-      }, makeAnnotationIndex(() => 0));
+    const annotationIndexCounts = dataset.annotations.index.toSeq()
+      .reduce((index: AnnotationIndex<number>, indexElement: AnnotationIndexElement, aspect: Aspect) => {
+        const allSize = indexElement.get("all").size;
+        return index
+          .setIn([aspect, "all"], allSize)
+          .setIn([aspect, "knownAll"], indexElement.get("knownAll").size)
+          .setIn([aspect, "knownExp"], indexElement.get("knownExp").size)
+          .setIn([aspect, "knownOther"], indexElement.get("knownOther").size)
+          .setIn([aspect, "unknown"], indexElement.get("unknown").size)
+          .setIn([aspect, "unannotated"], totalGeneCount - allSize);
+      }, AnnotationIndex<number>(() => 0)());
 
-    result["totalGenes"] = totalGeneCount;
-    return result;
+    const annotationCountsResult = annotationIndexCounts.toJS();
+    annotationCountsResult["totalGenes"] = totalGeneCount;
+    return annotationCountsResult;
   }
 }
 

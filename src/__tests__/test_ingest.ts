@@ -1,4 +1,12 @@
-import {parseAnnotationsData, parseAnnotationsText, parseGenesData, splitMetadataText} from "../ingest";
+import {
+  Annotation, AnnotationStatus,
+  Aspect,
+  parseAnnotationsData,
+  parseAnnotationsText,
+  parseGenesData,
+  splitMetadataText
+} from "../ingest";
+import {OrderedSet, Set} from "immutable";
 
 const gene_data = `
 AT1G01010	protein_coding
@@ -28,17 +36,31 @@ TAIR	locus:2163011	UVH1		GO:0000014	TAIR:Communication:501741973	IBA	PANTHER:PTN
 
 describe("Ingestion functions", () => {
 
-    it("should parse a set of Annotations", () => {
-        expect(parseAnnotationsData(annotation_data)).toMatchSnapshot();
-    });
+  it("should parse a set of Annotations", () => {
+    const maybeAnnotationData = parseAnnotationsData(annotation_data);
+    expect(maybeAnnotationData).not.toBeNull();
+    if (maybeAnnotationData === null) {
+      fail("annotation data should not be null!");
+    }
 
-    it("should parse a set of Gene IDs and Gene Product Types", () => {
-        expect(parseGenesData(gene_data)).toMatchSnapshot();
-    });
+    const annotationData = maybeAnnotationData.toJS();
+    expect(annotationData).toMatchSnapshot();
+  });
 
-    it("should not fail if the input text is empty", () => {
-        expect(() => parseGenesData("")).not.toThrow();
-    });
+  it("should parse a set of Gene IDs and Gene Product Types", () => {
+    const maybeGeneData = parseGenesData(gene_data);
+    expect(maybeGeneData).not.toBeNull();
+    if (maybeGeneData === null) {
+      fail("gene data should not be null!");
+    }
+
+    const geneData = maybeGeneData.toJS();
+    expect(geneData).toMatchSnapshot();
+  });
+
+  it("should not fail if the input text is empty", () => {
+    expect(() => parseGenesData("")).not.toThrow();
+  });
 });
 
 describe("The Annotation text parser", () => {
@@ -201,8 +223,8 @@ TAIR	locus:2043067	ENOC		GO:0000015	TAIR:AnalysisReference:501756966	IEA	InterPr
     const result = parseAnnotationsText(annotations_file);
     if (!result) fail("annotations should parse");
     const headerExists = result.records.some(annotation =>
-      annotation.Db === "DB" ||
-      annotation.DatabaseID === "DB Object ID");
+      annotation.get("Db") === "DB" ||
+      annotation.get("DatabaseID") === "DB Object ID");
     expect(headerExists).toEqual(false);
   });
 

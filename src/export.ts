@@ -9,18 +9,14 @@ const column_modifiers: Map<string | null, json2csv.FieldInfo<Annotation>> = new
         value: () => ''
     }],
     ["Invert", {
-        value: (row: Annotation) => row.Invert === true ? "NOT" : ''
+        value: (row: Annotation) => row.get("Invert") ? "NOT" : ''
     }],
     ["AlternativeGeneName", {
-        value: (row: Annotation) => (row.AlternativeGeneName || []).join("|")
+        value: (row: Annotation) => row.get("AlternativeGeneName").join("|")
     }],
     ["AdditionalEvidence", {
-        value: (row: Annotation) => (row.AdditionalEvidence || []).join("|")
+        value: (row: Annotation) => row.get("AdditionalEvidence").join("|")
     }],
-    ["Date", {
-        // return new Date(Date.parse(`${value.slice(0,4)}-${value.slice(4,6)}-${value.slice(6,8)}`));
-        value: (row) => new Date(row.Date).toJSON().split("T")[0].replace(/\-/g, "")
-    }]
 ])
 
 export const metadataSerializer = (metadata: { [key: string]: string }) => Object.entries(metadata)
@@ -80,7 +76,7 @@ export function buildGenesMetadata(data: StructuredData, additionalMetadata: { [
 }
 
 export function genesToCSV(data: StructuredData, additionalMetadata: { [key: string]: string } = {}) {
-    const inputs = Object.values(data.genes.index).map(val => val.gene);
+    const inputs = data.genes.index.map(geneElement => geneElement.get("gene"));
 
     const transformer = new Transform({
         fields: GENE_COLUMNS,
@@ -100,12 +96,9 @@ export function genesToCSV(data: StructuredData, additionalMetadata: { [key: str
     const input = new Readable({ objectMode: true });
     input._read = () => { };
 
-    for (const record of inputs) {
-        input.push(record)
-    }
+    inputs.forEach(gene => input.push(gene));
     input.push(null);
-
-    input.pipe(transformer)
+    input.pipe(transformer);
 
     return combine()
         .append(header+"\n")
