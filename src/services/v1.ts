@@ -1,7 +1,7 @@
 import {readFileSync} from "fs";
 import {resolve} from "path";
 import {Errors, GET, Path, QueryParam, Return, ContextResponse} from "typescript-rest";
-import {queryAnnotated, QueryOption, Segment, Strategy} from "../queries";
+import {Filter, queryAnnotated, QueryOption, Segment, Strategy} from "../queries";
 import {
   AnnotationStatus,
   Aspect,
@@ -34,16 +34,22 @@ export class V1Service {
   @GET
   genes(
     /**
-     * ?filter[]
+     * ?segments[]
      * This query is used to generate a selection of genes and annotations
-     * according to which Aspect and Annotation Status they belong to.
+     * according to which Segment (Aspect and Annotation Status) they belong to.
      */
-    @QueryParam("filter") maybeFilters: string[],
+    @QueryParam("segments") maybeSegments: string[],
+    /**
+     * ?filter=""
+     * This filter describes which subset of Genes will be used for querying.
+     * The option for filter are "all" | "include_protein" | "exclude_pseudogene".
+     */
+    @QueryParam("filter") maybeFilter: string = "all",
     /**
      * ?strategy
      * This query parameter is used to choose whether genes and annotations
-     * are selected using a "union" strategy (where at least one filter must
-     * match) or using an "intersection" strategy (where all filters must
+     * are selected using a "union" strategy (where at least one segment must
+     * match) or using an "intersection" strategy (where all segments must
      * match). The default value is "union".
      */
     @QueryParam("strategy") maybeStrategy: string = "union",
@@ -56,8 +62,9 @@ export class V1Service {
     @QueryParam("format") maybeFormat: string = "json",
     @ContextResponse response: express.Response
   ) {
-    // Validate all of the filter query params. This throws a 400 if any are formatted incorrectly.
-    const segments: Segment[] = (maybeFilters || []).map(validateSegments);
+    // Validate all of the segment query params. This throws a 400 if any are formatted incorrectly.
+    const segments: Segment[] = (maybeSegments || []).map(validateSegments);
+    const filter: Filter = validateFilter(maybeFilter);
 
     let query: QueryOption;
     if (segments.length === 0) {
@@ -66,7 +73,7 @@ export class V1Service {
 
       // Validates the strategy query param string, which must be exactly "union" or "intersection".
       const strategy: Strategy = validateStrategy(maybeStrategy);
-      query = {tag: "QueryWith", strategy, segments};
+      query = {tag: "QueryWith", filter, strategy, segments};
     }
 
     // TODO include unannotated genes
@@ -75,18 +82,18 @@ export class V1Service {
     // TODO include unannotated genes
     const format = validateFormat(maybeFormat);
 
-    const filters_meta = {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")};
+    const segments_meta = {segments: segments.map(s=>`${s.aspect}-${s.annotationStatus}`).join(", ")};
 
     switch (format) {
       case "gaf":
-        const gafFileStream = annotationsToGAF(queriedDataset, filters_meta);
+        const gafFileStream = annotationsToGAF(queriedDataset, segments_meta);
         response.status(200);
         response.setHeader("Content-Type", "application/csv");
         response.setHeader("Content-disposition", "attachment;filename=gene-association.gaf");
         gafFileStream.pipe(response);
         return Return.NoResponse;
       case "gene-csv":
-        const csvFileStream = genesToCSV(queriedDataset, filters_meta);
+        const csvFileStream = genesToCSV(queriedDataset, segments_meta);
         response.status(200);
         response.setHeader("Content-Type", "application/csv");
         response.setHeader("Content-disposition", "attachment;filename=gene-types.csv");
@@ -96,8 +103,8 @@ export class V1Service {
         return {
           genes: queriedDataset.genes.records,
           annotations: queriedDataset.annotations.records,
-          gene_metadata: buildGenesMetadata(queriedDataset, filters_meta),
-          annotation_metadata: buildAnnotationMetadata(queriedDataset, filters_meta)
+          gene_metadata: buildGenesMetadata(queriedDataset, segments_meta),
+          annotation_metadata: buildAnnotationMetadata(queriedDataset, segments_meta)
         };
     }
   }
@@ -166,33 +173,50 @@ function intoAnnotationStatus(queryStatus: QueryStatus): AnnotationStatus {
 }
 
 /**
- * Validates that a filter string is properly formatted.
+ * Validates that a segment string is properly formatted.
  *
- * The proper format for a filter is ASPECT,ANNOTATION_STATUS
+ * The proper format for a segment is ASPECT,ANNOTATION_STATUS
  * where ASPECT is exactly "P", "C", or "F", and
  * where ANNOTATION_STATUS is exactly "EXP", "OTHER", "UNKNOWN", or "UNANNOTATED".
  *
- * This function throws a 400 if the filter is ill-formatted, or an
- * IFilter object with the filter parts if the validation succeeded.
+ * This function throws a 400 if the filter is ill-formatted, or a
+ * Segment object with the segment parts if the validation succeeded.
  *
- * @param maybeFilter The string which we are checking is a valid filter.
+ * @param maybeSegment The string which we are checking is a valid segment.
  */
-function validateSegments(maybeFilter: string): Segment {
-  const parts = maybeFilter.split(",");
+function validateSegments(maybeSegment: string): Segment {
+  const parts = maybeSegment.split(",");
   if (parts.length !== 2) {
-    throw new Errors.BadRequestError("each filter must have exactly two parts, an Aspect and an Annotation Status, separated by a comma");
+    throw new Errors.BadRequestError("each segment must have exactly two parts, an Aspect and an Annotation Status, separated by a comma");
   }
 
   const [aspect, queryStatus] = parts;
   if (!validateAspect(aspect)) {
-    throw new Errors.BadRequestError("the Aspect given in a filter must be exactly 'P', 'C', or 'F'");
+    throw new Errors.BadRequestError("the Aspect given in a segment must be exactly 'P', 'C', or 'F'");
   }
   if (!validateQueryStatus(queryStatus)) {
-    throw new Errors.BadRequestError("the Annotation Status given in a filter must be exactly 'EXP', 'OTHER', 'UNKNOWN', or 'UNANNOTATED'");
+    throw new Errors.BadRequestError("the Annotation Status given in a segment must be exactly 'EXP', 'OTHER', 'UNKNOWN', or 'UNANNOTATED'");
   }
 
   const annotationStatus = intoAnnotationStatus(queryStatus);
   return {aspect, annotationStatus};
+}
+
+/**
+ * Validates that a filter string is in a proper format, either
+ * 'all', 'include_protein', or 'exclude_pseudogene'.
+ *
+ * @param maybeFilter the parameter to validate.
+ */
+function validateFilter(maybeFilter: string): Filter {
+  if (
+    maybeFilter !== "all" &&
+    maybeFilter !== "include_protein" &&
+    maybeFilter !== "exclude_pseudogene"
+  ) {
+    throw new Errors.BadRequestError("filter must be 'all', 'include_protein', or 'exclude_pseudogene'");
+  }
+  return maybeFilter;
 }
 
 /**

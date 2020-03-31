@@ -28,6 +28,8 @@ export type Segment = {
  */
 export type Strategy = "union" | "intersection";
 
+export type Filter = "all" | "include_protein" | "exclude_pseudogene";
+
 /**
  * A QueryOption describes the strategy and parameters of the query
  * to perform for `queryAnnotated`. A value of type QueryOption may
@@ -39,6 +41,7 @@ export type QueryOption = QueryGetAll | QueryWith;
 export type QueryGetAll = { tag: "QueryGetAll" };
 export type QueryWith = {
   tag: "QueryWith",
+  filter: Filter,
   strategy: Strategy,
   segments: Segment[],
 };
