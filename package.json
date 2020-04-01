@@ -32,6 +32,7 @@
   },
   "scripts": {
     "start": "node -r ts-node/register -r dotenv/config src/index.ts",
+    "perf": "node --inspect-brk -r ts-node/register -r dotenv/config src/index.ts",
     "dev": "ts-node-dev -r dotenv/config --no-notify src/index.ts",
     "build": "tsc",
     "test": "jest"
