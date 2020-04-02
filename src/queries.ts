@@ -66,13 +66,30 @@ export const queryAnnotated = (
 
     case "QueryWith": {
 
+      let predicate: (productType: string) => boolean;
+      switch (query.filter) {
+        case "all": {
+          predicate = (_: string) => true;
+          break;
+        }
+        case "include_protein": {
+          predicate = (productType => productType === "protein_coding");
+          break;
+        }
+        case "exclude_pseudogene": {
+          predicate = (productType => productType !== "pseudogene");
+          break;
+        }
+      }
+
       switch (query.strategy) {
         // Find the union of all of the segments given in the query options. This will
         // include all genes or annotations which match _any_ of the given segments.
         case "union": {
-          return query.segments
+          const result = query.segments
             .map(segment => querySegment(dataset, segment))
-            .reduce(union)
+            .reduce(union);
+          return filterProductType(result, predicate);
         }
 
         // Find the intersection of all of the segments given in the query options.
@@ -80,9 +97,10 @@ export const queryAnnotated = (
         // Annotations can never belong to more than one segment.
         // TODO the intersection of ONE segment should still return annotations
         case "intersection": {
-          return query.segments
+          const result = query.segments
             .map(segment => querySegment(dataset, segment))
             .reduce(intersect);
+          return filterProductType(result, predicate);
         }
       }
     }
@@ -279,6 +297,44 @@ const intersect = (one: StructuredData, two: StructuredData): QueryResult => {
     annotations: {
       metadata: one.annotations.metadata,
       header: one.annotations.header,
+      index: annotationIndex,
+      records: annotationRecords,
+    },
+  };
+};
+
+/**
+ * Given a queried dataset, apply a filter to the Gene Product Type of
+ * the results.
+ *
+ * @param dataset The dataset to apply a filter to.
+ * @param predicate Given the Gene Product Type, determines whether
+ *                  to keep Genes with that product type.
+ */
+const filterProductType = (dataset: StructuredData, predicate: (productType: string) => boolean): QueryResult => {
+  const geneIndex: GeneIndex = Object.entries(dataset.genes.index)
+    .filter(([_, geneElement]) => predicate(geneElement.gene.GeneProductType))
+    .reduce((acc, [geneId, geneElement]) => {
+      acc[geneId] = geneElement;
+      return acc;
+    }, {});
+  const geneRecords = Object.values(geneIndex).map(geneElement => geneElement.gene);
+
+  const annotationRecords = dataset.annotations.records.filter(annotation =>
+    annotation.GeneNames.some(name => geneIndex.hasOwnProperty(name)));
+  const annotationIndex = indexAnnotations(geneIndex, annotationRecords);
+
+  return {
+    raw: dataset.raw,
+    genes: {
+      metadata: dataset.genes.metadata,
+      header: dataset.genes.header,
+      index: geneIndex,
+      records: geneRecords,
+    },
+    annotations: {
+      metadata: dataset.annotations.metadata,
+      header: dataset.annotations.header,
       index: annotationIndex,
       records: annotationRecords,
     },

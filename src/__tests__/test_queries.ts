@@ -23,6 +23,7 @@ describe("Annotation queries", () => {
 
   it("should choose the proper subset for FilterWith:union for C:KNOWN_EXP", () => {
     const query: QueryWith = { tag: "QueryWith",
+      filter: "all",
       strategy: "union",
       segments: [{ aspect: "C", annotationStatus: "KNOWN_EXP" }],
     };
@@ -114,6 +115,7 @@ describe("Annotation queries", () => {
 
   it("should choose a proper subset for FilterWith:union for C:KNOWN_OTHER", () => {
     const query: QueryWith = { tag: "QueryWith",
+      filter: "all",
       strategy: "union",
       segments: [{ aspect: "C", annotationStatus: "KNOWN_OTHER" }],
     };
@@ -242,6 +244,7 @@ describe("Annotation queries", () => {
 
   it("should return the union of results when using FilterWith:union for C:KNOWN_OTHER,P:KNOWN_OTHER", () => {
     const query: QueryWith = { tag: "QueryWith",
+      filter: "all",
       strategy: "union",
       segments: [
         { aspect: "C", annotationStatus: "KNOWN_OTHER" },
@@ -665,6 +668,7 @@ describe("Annotation queries", () => {
 
   it("should find a single gene for QueryWith:intersection for C:KNOWN_OTHER,P:KNOWN_OTHER", () => {
     const query: QueryOption = { tag: "QueryWith",
+      filter: "all",
       strategy: "intersection",
       segments: [
         { aspect: "C", annotationStatus: "KNOWN_OTHER" },
