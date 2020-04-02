@@ -3,7 +3,8 @@ import {
   Aspect,
   GeneIndex,
   Annotation,
-  StructuredData, indexAnnotations, makeAnnotationIndex, Gene, indexGenes,
+  StructuredData,
+  indexAnnotations,
 } from "./ingest";
 
 /**
@@ -43,21 +44,6 @@ export type QueryWith = {
 };
 
 export type QueryResult = StructuredData;
-const emptyQuery = (dataset: StructuredData): QueryResult => ({
-  raw: dataset.raw,
-  genes: {
-    metadata: dataset.genes.metadata,
-    header: dataset.genes.header,
-    records: [],
-    index: {},
-  },
-  annotations: {
-    metadata: dataset.annotations.metadata,
-    header: dataset.annotations.header,
-    records: [],
-    index: makeAnnotationIndex(() => new Set()),
-  }
-});
 
 /**
  * Given the full set of Annotations and Genes and given a QueryOption,
@@ -81,7 +67,9 @@ export const queryAnnotated = (
         // Find the union of all of the segments given in the query options. This will
         // include all genes or annotations which match _any_ of the given segments.
         case "union": {
-          return queryWithUnion(dataset, query.segments);
+          return query.segments
+            .map(segment => querySegment(dataset, segment))
+            .reduce(union)
         }
 
         // Find the intersection of all of the segments given in the query options.
@@ -89,7 +77,9 @@ export const queryAnnotated = (
         // Annotations can never belong to more than one segment.
         // TODO the intersection of ONE segment should still return annotations
         case "intersection": {
-          return queryWithIntersection(dataset, query.segments);
+          return query.segments
+            .map(segment => querySegment(dataset, segment))
+            .reduce(intersect);
         }
       }
     }
@@ -202,113 +192,92 @@ const querySegment = (
 };
 
 /**
- * Returns all of the annotations from the given dataset which belong
- * to at least one of the given segments, as well as all of the genes
- * referenced by those annotations.
+ * Given two datasets, return all genes from both datasets as well
+ * as all of the annotations for those genes.
  *
- * @param dataset The active dataset to query results from.
- * @param segments A list of segments given by the user in order to find
- * all genes that belong to the union of those segments.
+ * @param one The first dataset
+ * @param two The second dataset
  */
-const queryWithUnion = (
-  dataset: StructuredData,
-  segments: Segment[],
-): QueryResult => {
-  let geneIndex: GeneIndex = {};
-  let annotations: Set<Annotation> = new Set();
+const union = (one: StructuredData, two: StructuredData): QueryResult => {
+  const geneIndex: GeneIndex = [
+    ...Object.entries(one.genes.index),
+    ...Object.entries(two.genes.index),
+  ].reduce((acc, [geneId, geneElement]) => {
+    acc[geneId] = geneElement;
+    return acc;
+  }, {});
 
-  for (const segment of segments) {
-    const segmentQueryResults = querySegment(dataset, segment);
-
-    // Insert genes from this segment into the queriedGenes
-    Object.entries(segmentQueryResults.genes.index)
-      .forEach(([geneId, gene]) => geneIndex[geneId] = gene);
-
-    // Add all annotations from this segment into the queriedAnnotations
-    segmentQueryResults.annotations.records.forEach(annotation => annotations.add(annotation));
-  }
-
-  const annotationRecords = [...annotations];
   const geneRecords = Object.values(geneIndex)
-    .map(({ gene }) => gene);
+    .map(geneElement => geneElement.gene);
 
+  const unionAnnotations = new Set([
+    ...one.annotations.records,
+    ...two.annotations.records,
+  ]);
+
+  const annotationRecords = Array.from(unionAnnotations);
   const annotationIndex = indexAnnotations(geneIndex, annotationRecords);
 
   return {
-    raw: dataset.raw,
+    raw: one.raw,
     genes: {
-      metadata: dataset.genes.metadata,
-      header: dataset.genes.header,
-      records: geneRecords,
+      metadata: one.genes.metadata,
+      header: one.genes.header,
       index: geneIndex,
+      records: geneRecords,
     },
     annotations: {
-      metadata: dataset.annotations.metadata,
-      header: dataset.annotations.header,
-      records: annotationRecords,
+      metadata: one.annotations.metadata,
+      header: one.annotations.header,
       index: annotationIndex,
+      records: annotationRecords,
     },
   };
 };
 
 /**
- * Returns all of the genes from the given dataset which have at least
- * one annotation in _all_ of the given segments.
+ * Given two datasets, returns the genes that belong to both datasets
+ * as well as all of the annotations for those genes.
  *
- * @param dataset The active dataset to query results from.
- * @param segments A list of segments given by the user in order to find
- * all genes that belong to the intersection of those segments.
+ * @param one The first dataset
+ * @param two The second dataset
  */
-const queryWithIntersection = (
-  dataset: StructuredData,
-  segments: Segment[],
-): QueryResult => {
-  if (segments.length === 0) return emptyQuery(dataset);
-  if (segments.length === 1) return querySegment(dataset, segments[0]);
+const intersect = (one: StructuredData, two: StructuredData): QueryResult => {
+  // Take the intersection of genes
+  const geneIndex: GeneIndex = Object.entries(one.genes.index)
+    .filter(([geneId, _]) => two.genes.index.hasOwnProperty(geneId))
+    .reduce<GeneIndex>((acc, [geneId, geneElement]) => {
+      acc[geneId] = geneElement;
+      return acc;
+    }, {});
 
-  const maybeHead = segments.shift();
-  if (!maybeHead) return emptyQuery(dataset);
-  const head: Segment = maybeHead;
-  const headResults = querySegment(dataset, head);
+  const geneRecords = Object.values(geneIndex)
+    .map(geneElement => geneElement.gene);
 
-  let genes: Set<Gene> = new Set([...headResults.genes.records]);
-  let annotations: Set<Annotation> = new Set([...headResults.annotations.records]);
+  // Take the union of annotations
+  const unionAnnotations = new Set([
+    ...one.annotations.records,
+    ...two.annotations.records,
+  ]);
 
-  for (const segment of segments) {
-    const result = querySegment(dataset, segment);
+  const annotationRecords = Array.from(unionAnnotations)
+    .filter(annotation => annotation.GeneNames.some(name => geneIndex.hasOwnProperty(name)));
 
-    // Take the intersection with genes from other segments
-    genes = new Set(Array.from(genes).filter(gene => result.genes.records.includes(gene)));
-
-    // Take the union with annotations from other segments
-    result.annotations.records.forEach(record => annotations.add(record));
-  }
-
-  const geneRecords = Array.from(genes);
-  const geneRecordNames = geneRecords.map(gene => gene.GeneID);
-
-  // Filter out annotations whose genes don't belong to the intersection
-  const annotationRecords = Array.from(annotations).filter(anno => {
-    const names = [anno.UniqueGeneName, ...anno.AlternativeGeneName];
-    return names.some(name => geneRecordNames.includes(name));
-  });
-
-  const geneIndex = indexGenes(geneRecords, annotationRecords);
   const annotationIndex = indexAnnotations(geneIndex, annotationRecords);
 
   return {
-    raw: dataset.raw,
+    raw: one.raw,
     genes: {
-      metadata: dataset.genes.metadata,
-      header: dataset.genes.header,
-      records: geneRecords,
+      metadata: one.genes.metadata,
+      header: one.genes.header,
       index: geneIndex,
+      records: geneRecords,
     },
     annotations: {
-      metadata: dataset.annotations.metadata,
-      header: dataset.annotations.header,
-      records: annotationRecords,
+      metadata: one.annotations.metadata,
+      header: one.annotations.header,
       index: annotationIndex,
+      records: annotationRecords,
     },
   };
 };

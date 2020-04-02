@@ -16,6 +16,14 @@ const geneIndex: GeneIndex = {
         EvidenceCode: 'IDA',
         AdditionalEvidence: [ '' ],
         Aspect: 'C',
+        GeneNames: [
+          'AT4G18120',
+          'AML3',
+          'ML3',
+          'MEI2-like 3',
+          'F15J5.90',
+          'F15J5_90'
+        ],
         UniqueGeneName: 'AT4G18120',
         AlternativeGeneName: [
           'AT4G18120',
@@ -49,6 +57,7 @@ const geneIndex: GeneIndex = {
         EvidenceCode: 'TAS',
         AdditionalEvidence: [ '' ],
         Aspect: 'P',
+        GeneNames: [ 'AT5G40395', 'U6acat', '67751.snRNA00001' ],
         UniqueGeneName: 'AT5G40395',
         AlternativeGeneName: [ 'AT5G40395', 'U6acat', '67751.snRNA00001' ],
         GeneProductType: 'snRNA',
@@ -75,6 +84,12 @@ const geneIndex: GeneIndex = {
         EvidenceCode: 'TAS',
         AdditionalEvidence: [ '' ],
         Aspect: 'P',
+        GeneNames: [
+          'AT5G46315',
+          'U6-29',
+          'U6 small nucleolar RNA29',
+          '67796.snRNA00001'
+        ],
         UniqueGeneName: 'AT5G46315',
         AlternativeGeneName: [
           'AT5G46315',
@@ -106,6 +121,15 @@ const geneIndex: GeneIndex = {
         EvidenceCode: 'IBA',
         AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
         Aspect: 'P',
+        GeneNames: [
+          'AT1G67070',
+          'DIN9',
+          'PMI2',
+          'DARK INDUCIBLE 9',
+          'PHOSPHOMANNOSE ISOMERASE 2',
+          'F1O19.12',
+          'F1O19_12'
+        ],
         UniqueGeneName: 'AT1G67070',
         AlternativeGeneName: [
           'AT1G67070',
@@ -140,6 +164,15 @@ const geneIndex: GeneIndex = {
         EvidenceCode: 'IBA',
         AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
         Aspect: 'P',
+        GeneNames: [
+          'AT3G02570',
+          'MEE31',
+          'PMI1',
+          'MATERNAL EFFECT EMBRYO ARREST 31',
+          'PHOSPHOMANNOSE ISOMERASE 1',
+          'F16B3.20',
+          'F16B3_20'
+        ],
         UniqueGeneName: 'AT3G02570',
         AlternativeGeneName: [
           'AT3G02570',
@@ -174,6 +207,13 @@ const geneIndex: GeneIndex = {
         EvidenceCode: 'IBA',
         AdditionalEvidence: [ 'PANTHER:PTN000466551', 'EcoGene:EG50003', 'UniProtKB:P9WQF3' ],
         Aspect: 'F',
+        GeneNames: [
+          'AT1G65290',
+          'mtACP2',
+          'mitochondrial acyl carrier protein 2',
+          'T8F5.6',
+          'T8F5_6'
+        ],
         UniqueGeneName: 'AT1G65290',
         AlternativeGeneName: [
           'AT1G65290',
@@ -206,6 +246,7 @@ const geneIndex: GeneIndex = {
         EvidenceCode: 'ISM',
         AdditionalEvidence: [ '' ],
         Aspect: 'C',
+        GeneNames: [ 'AT1G09440', 'AT1G09440.2' ],
         UniqueGeneName: '',
         AlternativeGeneName: [ 'AT1G09440', 'AT1G09440.2' ],
         GeneProductType: 'protein',
@@ -234,6 +275,7 @@ const geneIndex: GeneIndex = {
         EvidenceCode: 'ISM',
         AdditionalEvidence: [ '' ],
         Aspect: 'C',
+        GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
         UniqueGeneName: 'Heartstopper',
         AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
         GeneProductType: 'protein',
@@ -252,6 +294,7 @@ const geneIndex: GeneIndex = {
         EvidenceCode: 'ISM',
         AdditionalEvidence: [ '' ],
         Aspect: 'P',
+        GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
         UniqueGeneName: 'Heartstopper',
         AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
         GeneProductType: 'protein',

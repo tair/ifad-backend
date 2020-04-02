@@ -70,6 +70,7 @@ export type Annotation = {
   AdditionalEvidence: string[],
   Aspect: Aspect,
   AnnotationStatus: AnnotationStatus,
+  GeneNames: string[],
   UniqueGeneName: string,
   AlternativeGeneName: string[],
   GeneProductType: string,
@@ -113,6 +114,7 @@ export const parseAnnotationsData = (input: string): Annotation[] | null => {
   })
     .map(item => ({
       ...item,
+      GeneNames: [item.UniqueGeneName, ...item.AlternativeGeneName],
       AnnotationStatus: evidenceCodeToAnnotationStatus(item.EvidenceCode)
     }));
 };
@@ -358,8 +360,7 @@ export const indexGenes = (
   return geneData.reduce((acc, current) => {
     const annotations = annotationRecords
       .filter(anno => {
-        const names = [anno.UniqueGeneName, ...anno.AlternativeGeneName];
-        return names.includes(current.GeneID);
+        return anno.GeneNames.includes(current.GeneID);
       });
 
     acc[current.GeneID] = {
