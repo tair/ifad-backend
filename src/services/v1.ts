@@ -1,7 +1,7 @@
 import {readFileSync} from "fs";
 import {resolve} from "path";
 import {Errors, GET, Path, QueryParam, Return, ContextResponse} from "typescript-rest";
-import {Filter, queryAnnotated, QueryOption, Segment, Strategy} from "../queries";
+import {GeneProductTypeFilter, Query, queryDataset, QueryOption, Segment, Strategy} from "../queries";
 import {
   AnnotationStatus,
   Aspect,
@@ -64,24 +64,21 @@ export class V1Service {
   ) {
     // Validate all of the segment query params. This throws a 400 if any are formatted incorrectly.
     const segments: Segment[] = (maybeSegments || []).map(validateSegments);
-    const filter: Filter = validateFilter(maybeFilter);
+    const filter: GeneProductTypeFilter = validateFilter(maybeFilter);
+    const format = validateFormat(maybeFormat);
 
-    let query: QueryOption;
+    let option: QueryOption;
     if (segments.length === 0) {
-      query = {tag: "QueryGetAll"};
+      option = {tag: "QueryGetAll"};
     } else {
 
       // Validates the strategy query param string, which must be exactly "union" or "intersection".
       const strategy: Strategy = validateStrategy(maybeStrategy);
-      query = {tag: "QueryWith", filter, strategy, segments};
+      option = {tag: "QueryWith", strategy, segments};
     }
 
-    // TODO include unannotated genes
-    const queriedDataset = queryAnnotated(dataset, query);
-
-    // TODO include unannotated genes
-    const format = validateFormat(maybeFormat);
-
+    const query: Query = { filter, option: option };
+    const queriedDataset = queryDataset(dataset, query);
     const segments_meta = {segments: segments.map(s=>`${s.aspect}-${s.annotationStatus}`).join(", ")};
 
     switch (format) {
@@ -111,10 +108,20 @@ export class V1Service {
 
   @Path("/wgs_segments")
   @GET
-  get_wgs() {
-    const totalGeneCount = Object.keys(dataset.genes.index).length;
+  get_wgs(
+    /**
+     * ?filter=""
+     * This filter describes which subset of Genes will be used for querying.
+     * The option for filter are "all" | "include_protein" | "exclude_pseudogene".
+     */
+    @QueryParam("filter") maybeFilter: string = "exclude_pseudogene",
+  ) {
+    const filter = validateFilter(maybeFilter);
+    const query: Query = { filter, option: {tag: "QueryGetAll"} };
+    let queryResult = queryDataset(dataset, query);
 
-    const result = Object.entries(dataset.annotations.index)
+    const totalGeneCount = Object.keys(queryResult.genes.index).length;
+    const result = Object.entries(queryResult.annotations.index)
       .reduce((acc, [aspect, {all, known: {all: known_all, exp, other}, unknown}]) => {
         acc[aspect].all = all.size;
         acc[aspect].known.all = known_all.size;
@@ -208,7 +215,7 @@ function validateSegments(maybeSegment: string): Segment {
  *
  * @param maybeFilter the parameter to validate.
  */
-function validateFilter(maybeFilter: string): Filter {
+function validateFilter(maybeFilter: string): GeneProductTypeFilter {
   if (
     maybeFilter !== "all" &&
     maybeFilter !== "include_protein" &&
