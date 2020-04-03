@@ -67,6 +67,8 @@ export class V1Service {
     const filter: GeneProductTypeFilter = validateFilter(maybeFilter);
     const format = validateFormat(maybeFormat);
 
+    let segments_meta: {[key: string]: string} = {filter};
+
     let option: QueryOption;
     if (segments.length === 0) {
       option = {tag: "QueryGetAll"};
@@ -75,11 +77,12 @@ export class V1Service {
       // Validates the strategy query param string, which must be exactly "union" or "intersection".
       const strategy: Strategy = validateStrategy(maybeStrategy);
       option = {tag: "QueryWith", strategy, segments};
+      segments_meta.segments = segments.map(s=>`${s.aspect}-${s.annotationStatus}`).join(", ");
+      segments_meta.strategy = strategy;
     }
 
     const query: Query = { filter, option: option };
     const queriedDataset = queryDataset(dataset, query);
-    const segments_meta = {segments: segments.map(s=>`${s.aspect}-${s.annotationStatus}`).join(", ")};
 
     switch (format) {
       case "gaf":
