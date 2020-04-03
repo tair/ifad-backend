@@ -100,7 +100,7 @@ const queryAll = (dataset: StructuredData): QueryResult => {
 
   // Construct a list of all gene names in all annotations.
   const geneNamesInAnnotations = new Set(
-    annotations.flatMap(a => [a.UniqueGeneName, ...a.AlternativeGeneName])
+    annotations.flatMap(a => a.GeneNames)
   );
 
   // Group all of the genes that appear in the annotations list.

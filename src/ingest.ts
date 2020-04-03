@@ -427,8 +427,8 @@ export const indexAnnotations = (
     .reduce((acc, annotation) => {
       const aspect = annotation.Aspect;
       const annotationStatus = annotation.AnnotationStatus;
-      const geneId = [annotation.UniqueGeneName, ...annotation.AlternativeGeneName]
-        .find(name => !!geneIndex[name]);
+      const geneId = annotation.GeneNames
+        .find(name => geneIndex.hasOwnProperty(name));
       if (!geneId) return acc;
 
       const {gene, annotations} = geneIndex[geneId];
