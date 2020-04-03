@@ -28,7 +28,17 @@ export type Segment = {
  */
 export type Strategy = "union" | "intersection";
 
-export type Filter = "all" | "include_protein" | "exclude_pseudogene";
+/**
+ * The types of Gene Product Type filters that may be applied to
+ * a query result.
+ *
+ *   * all: Will return the original query result unchanged.
+ *   * include_protein: Will return only genes and annotations whose
+ *                      Gene Product Type is "protein_coding"
+ *   * exclude_pseudogene: Will return only genes and annotations whose
+ *                         Gene Product Type is _not_ "pseudogene".
+ */
+export type GeneProductTypeFilter = "all" | "include_protein" | "exclude_pseudogene";
 
 /**
  * A QueryOption describes the strategy and parameters of the query
@@ -37,11 +47,14 @@ export type Filter = "all" | "include_protein" | "exclude_pseudogene";
  * additional data bundled with it that further describes the nature
  * of the query to perform.
  */
+export type Query = {
+  filter: GeneProductTypeFilter,
+  option: QueryOption,
+};
 export type QueryOption = QueryGetAll | QueryWith;
 export type QueryGetAll = { tag: "QueryGetAll" };
 export type QueryWith = {
   tag: "QueryWith",
-  filter: Filter,
   strategy: Strategy,
   segments: Segment[],
 };
@@ -52,59 +65,47 @@ export type QueryResult = StructuredData;
  * Given the full set of Annotations and Genes and given a QueryOption,
  * return the subset of Genes and Annotations represented by the query.
  */
-export const queryAnnotated = (
+export const queryDataset = (
   dataset: StructuredData,
-  query: QueryOption,
+  query: Query,
 ): QueryResult => {
+  const { filter, option } = query;
 
-  switch (query.tag) {
+  let result: QueryResult;
+  switch (option.tag) {
     // When no segments are provided in the query, we simply return all annotations
     // and all of the genes that those annotations reference.
     case "QueryGetAll": {
-      return queryAll(dataset);
+      result = queryAll(dataset);
+      break;
     }
 
     case "QueryWith": {
 
-      let predicate: (productType: string) => boolean;
-      switch (query.filter) {
-        case "all": {
-          predicate = (_: string) => true;
-          break;
-        }
-        case "include_protein": {
-          predicate = (productType => productType === "protein_coding");
-          break;
-        }
-        case "exclude_pseudogene": {
-          predicate = (productType => productType !== "pseudogene");
-          break;
-        }
-      }
-
-      switch (query.strategy) {
+      switch (option.strategy) {
         // Find the union of all of the segments given in the query options. This will
         // include all genes or annotations which match _any_ of the given segments.
         case "union": {
-          const result = query.segments
+          result = option.segments
             .map(segment => querySegment(dataset, segment))
             .reduce(union);
-          return filterProductType(result, predicate);
+          break;
         }
 
         // Find the intersection of all of the segments given in the query options.
-        // This will include only those genes which match _all_ of the given segments.
-        // Annotations can never belong to more than one segment.
-        // TODO the intersection of ONE segment should still return annotations
+        // This will include only those genes which match _all_ of the given segments,
+        // as well as the annotations that belong to those genes.
         case "intersection": {
-          const result = query.segments
+           result = option.segments
             .map(segment => querySegment(dataset, segment))
             .reduce(intersect);
-          return filterProductType(result, predicate);
+           break;
         }
       }
     }
   }
+
+  return filterProductType(result, filter);
 };
 
 /**
@@ -304,6 +305,32 @@ const intersect = (one: StructuredData, two: StructuredData): QueryResult => {
 };
 
 /**
+ * Given a queried dataset and a Gene Product Type filter, return
+ * the subset of the dataset which matches the filter.
+ *
+ * @param dataset The dataset to filter over.
+ * @param filter The Gene Product Type filter to use.
+ */
+export const filterProductType = (dataset: StructuredData, filter: GeneProductTypeFilter): QueryResult => {
+  let predicate: (productType: string) => boolean;
+  switch (filter) {
+    case "all": {
+      return dataset;
+    }
+    case "include_protein": {
+      predicate = (productType => productType === "protein_coding");
+      break;
+    }
+    case "exclude_pseudogene": {
+      predicate = (productType => productType !== "pseudogene");
+      break;
+    }
+  }
+
+  return _filterProductType(dataset, predicate);
+};
+
+/**
  * Given a queried dataset, apply a filter to the Gene Product Type of
  * the results.
  *
@@ -311,7 +338,7 @@ const intersect = (one: StructuredData, two: StructuredData): QueryResult => {
  * @param predicate Given the Gene Product Type, determines whether
  *                  to keep Genes with that product type.
  */
-const filterProductType = (dataset: StructuredData, predicate: (productType: string) => boolean): QueryResult => {
+const _filterProductType = (dataset: StructuredData, predicate: (productType: string) => boolean): QueryResult => {
   const geneIndex: GeneIndex = Object.entries(dataset.genes.index)
     .filter(([_, geneElement]) => predicate(geneElement.gene.GeneProductType))
     .reduce((acc, [geneId, geneElement]) => {

@@ -1,11 +1,11 @@
 import { structuredData } from "./test_data";
-import {QueryGetAll, QueryWith, queryAnnotated, QueryOption} from "../queries";
+import {queryDataset, Query} from "../queries";
 import {Annotation, GeneIndex} from "../ingest";
 
 describe("Annotation queries", () => {
 
   it("should return all annotations and genes that appear in them with FilterGetAll", () => {
-    const query: QueryGetAll = { tag: "QueryGetAll" };
+    const query: Query = { filter: "all", option: { tag: "QueryGetAll" } };
 
     const expectedGeneIndex: GeneIndex = Object.entries(structuredData.genes.index)
       // There is a specific gene which does not belong to any annotations called ATBLAHBLAH.
@@ -16,16 +16,19 @@ describe("Annotation queries", () => {
         return acc;
       }, {});
 
-    const queryResult = queryAnnotated(structuredData, query);
+    const queryResult = queryDataset(structuredData, query);
     expect(queryResult.genes.index).toEqual(expectedGeneIndex);
     expect(queryResult.annotations.records).toEqual(structuredData.annotations.records);
   });
 
   it("should choose the proper subset for FilterWith:union for C:KNOWN_EXP", () => {
-    const query: QueryWith = { tag: "QueryWith",
+    const query: Query = {
       filter: "all",
-      strategy: "union",
-      segments: [{ aspect: "C", annotationStatus: "KNOWN_EXP" }],
+      option: {
+        tag: "QueryWith",
+        strategy: "union",
+        segments: [{ aspect: "C", annotationStatus: "KNOWN_EXP" }],
+      },
     };
 
     const expectedGeneIndex: GeneIndex = {
@@ -108,16 +111,19 @@ describe("Annotation queries", () => {
         GeneProductFormID: '' }
     ];
 
-    const queryResult = queryAnnotated(structuredData, query);
+    const queryResult = queryDataset(structuredData, query);
     expect(queryResult.genes.index).toEqual(expectedGeneIndex);
     expect(queryResult.annotations.records).toEqual(expectedAnnotations);
   });
 
   it("should choose a proper subset for FilterWith:union for C:KNOWN_OTHER", () => {
-    const query: QueryWith = { tag: "QueryWith",
+    const query: Query = {
       filter: "all",
-      strategy: "union",
-      segments: [{ aspect: "C", annotationStatus: "KNOWN_OTHER" }],
+      option: {
+        tag: "QueryWith",
+        strategy: "union",
+        segments: [{aspect: "C", annotationStatus: "KNOWN_OTHER"}],
+      },
     };
 
     const expectedGeneIndex: GeneIndex = {
@@ -237,19 +243,22 @@ describe("Annotation queries", () => {
         GeneProductFormID: '' },
     ];
 
-    const queryResult = queryAnnotated(structuredData, query);
+    const queryResult = queryDataset(structuredData, query);
     expect(queryResult.genes.index).toEqual(expectedGeneIndex);
     expect(queryResult.annotations.records).toEqual(expectedAnnotations);
   });
 
   it("should return the union of results when using FilterWith:union for C:KNOWN_OTHER,P:KNOWN_OTHER", () => {
-    const query: QueryWith = { tag: "QueryWith",
+    const query: Query = {
       filter: "all",
-      strategy: "union",
-      segments: [
-        { aspect: "C", annotationStatus: "KNOWN_OTHER" },
-        { aspect: "P", annotationStatus: "KNOWN_OTHER" },
-      ],
+      option: {
+        tag: "QueryWith",
+        strategy: "union",
+        segments: [
+          {aspect: "C", annotationStatus: "KNOWN_OTHER"},
+          {aspect: "P", annotationStatus: "KNOWN_OTHER"},
+        ],
+      },
     };
 
     const expectedGeneIndex: GeneIndex = {
@@ -657,7 +666,7 @@ describe("Annotation queries", () => {
     ];
 
     // Convert annotations lists to Sets in order to compare contents without order.
-    const queriedDataset = queryAnnotated(structuredData, query);
+    const queriedDataset = queryDataset(structuredData, query);
     const genes = queriedDataset.genes.index;
     const outputAnnotationsSet = new Set(queriedDataset.annotations.records);
     const expectedAnnotationsSet = new Set(expectedAnnotations);
@@ -667,13 +676,16 @@ describe("Annotation queries", () => {
   });
 
   it("should find a single gene for QueryWith:intersection for C:KNOWN_OTHER,P:KNOWN_OTHER", () => {
-    const query: QueryOption = { tag: "QueryWith",
+    const query: Query = {
       filter: "all",
-      strategy: "intersection",
-      segments: [
-        { aspect: "C", annotationStatus: "KNOWN_OTHER" },
-        { aspect: "P", annotationStatus: "KNOWN_OTHER" },
-      ],
+      option: {
+        tag: "QueryWith",
+        strategy: "intersection",
+        segments: [
+          {aspect: "C", annotationStatus: "KNOWN_OTHER"},
+          {aspect: "P", annotationStatus: "KNOWN_OTHER"},
+        ],
+      },
     };
 
     const expectedGeneIndex: GeneIndex = {
@@ -727,7 +739,7 @@ describe("Annotation queries", () => {
       },
     };
 
-    const queryResult = queryAnnotated(structuredData, query);
+    const queryResult = queryDataset(structuredData, query);
     const expectedAnnotations: Annotation[] = [
       { Db: '',
         DatabaseID: 'locus:1005716736',
