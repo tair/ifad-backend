@@ -1,6 +1,6 @@
 import { structuredData } from "./test_data";
 import {QueryGetAll, QueryWith, queryAnnotated, QueryOption} from "../queries";
-import {Annotation, GeneIndex, indexAnnotations, StructuredData} from "../ingest";
+import {Annotation, GeneIndex} from "../ingest";
 
 describe("Annotation queries", () => {
 
@@ -27,7 +27,7 @@ describe("Annotation queries", () => {
       segments: [{ aspect: "C", annotationStatus: "KNOWN_EXP" }],
     };
 
-    const expectedGeneIndex = {
+    const expectedGeneIndex: GeneIndex = {
       AT4G18120: {
         gene: {
           GeneID: "AT4G18120",
@@ -43,6 +43,14 @@ describe("Annotation queries", () => {
             EvidenceCode: 'IDA',
             AdditionalEvidence: [ '' ],
             Aspect: 'C',
+            GeneNames: [
+              'AT4G18120',
+              'AML3',
+              'ML3',
+              'MEI2-like 3',
+              'F15J5.90',
+              'F15J5_90'
+            ],
             UniqueGeneName: 'AT4G18120',
             AlternativeGeneName: [
               'AT4G18120',
@@ -73,6 +81,14 @@ describe("Annotation queries", () => {
         EvidenceCode: 'IDA',
         AdditionalEvidence: [ '' ],
         Aspect: 'C',
+        GeneNames: [
+          'AT4G18120',
+          'AML3',
+          'ML3',
+          'MEI2-like 3',
+          'F15J5.90',
+          'F15J5_90'
+        ],
         UniqueGeneName: 'AT4G18120',
         AlternativeGeneName: [
           'AT4G18120',
@@ -118,6 +134,7 @@ describe("Annotation queries", () => {
             EvidenceCode: 'ISM',
             AdditionalEvidence: [ '' ],
             Aspect: 'C',
+            GeneNames: [ 'AT1G09440', 'AT1G09440.2' ],
             UniqueGeneName: '',
             AlternativeGeneName: [ 'AT1G09440', 'AT1G09440.2' ],
             GeneProductType: 'protein',
@@ -144,6 +161,7 @@ describe("Annotation queries", () => {
             EvidenceCode: 'ISM',
             AdditionalEvidence: [ '' ],
             Aspect: 'C',
+            GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
             UniqueGeneName: 'Heartstopper',
             AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
             GeneProductType: 'protein',
@@ -162,6 +180,7 @@ describe("Annotation queries", () => {
             EvidenceCode: 'ISM',
             AdditionalEvidence: [ '' ],
             Aspect: 'P',
+            GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
             UniqueGeneName: 'Heartstopper',
             AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
             GeneProductType: 'protein',
@@ -185,6 +204,7 @@ describe("Annotation queries", () => {
         EvidenceCode: 'ISM',
         AdditionalEvidence: [ '' ],
         Aspect: 'C',
+        GeneNames: [ 'AT1G09440', 'AT1G09440.2' ],
         UniqueGeneName: '',
         AlternativeGeneName: [ 'AT1G09440', 'AT1G09440.2' ],
         GeneProductType: 'protein',
@@ -203,6 +223,7 @@ describe("Annotation queries", () => {
         EvidenceCode: 'ISM',
         AdditionalEvidence: [ '' ],
         Aspect: 'C',
+        GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
         UniqueGeneName: 'Heartstopper',
         AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
         GeneProductType: 'protein',
@@ -244,6 +265,7 @@ describe("Annotation queries", () => {
             EvidenceCode: 'ISM',
             AdditionalEvidence: [ '' ],
             Aspect: 'C',
+            GeneNames: [ 'AT1G09440', 'AT1G09440.2' ],
             UniqueGeneName: '',
             AlternativeGeneName: [ 'AT1G09440', 'AT1G09440.2' ],
             GeneProductType: 'protein',
@@ -270,6 +292,7 @@ describe("Annotation queries", () => {
             EvidenceCode: 'ISM',
             AdditionalEvidence: [ '' ],
             Aspect: 'C',
+            GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
             UniqueGeneName: 'Heartstopper',
             AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
             GeneProductType: 'protein',
@@ -288,6 +311,7 @@ describe("Annotation queries", () => {
             EvidenceCode: 'ISM',
             AdditionalEvidence: [ '' ],
             Aspect: 'P',
+            GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
             UniqueGeneName: 'Heartstopper',
             AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
             GeneProductType: 'protein',
@@ -314,6 +338,7 @@ describe("Annotation queries", () => {
             EvidenceCode: 'TAS',
             AdditionalEvidence: [ '' ],
             Aspect: 'P',
+            GeneNames: [ 'AT5G40395', 'U6acat', '67751.snRNA00001' ],
             UniqueGeneName: 'AT5G40395',
             AlternativeGeneName: [ 'AT5G40395', 'U6acat', '67751.snRNA00001' ],
             GeneProductType: 'snRNA',
@@ -340,6 +365,12 @@ describe("Annotation queries", () => {
             EvidenceCode: 'TAS',
             AdditionalEvidence: [ '' ],
             Aspect: 'P',
+            GeneNames: [
+              'AT5G46315',
+              'U6-29',
+              'U6 small nucleolar RNA29',
+              '67796.snRNA00001'
+            ],
             UniqueGeneName: 'AT5G46315',
             AlternativeGeneName: [
               'AT5G46315',
@@ -371,6 +402,15 @@ describe("Annotation queries", () => {
             EvidenceCode: 'IBA',
             AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
             Aspect: 'P',
+            GeneNames: [
+              'AT1G67070',
+              'DIN9',
+              'PMI2',
+              'DARK INDUCIBLE 9',
+              'PHOSPHOMANNOSE ISOMERASE 2',
+              'F1O19.12',
+              'F1O19_12'
+            ],
             UniqueGeneName: 'AT1G67070',
             AlternativeGeneName: [
               'AT1G67070',
@@ -405,6 +445,15 @@ describe("Annotation queries", () => {
             EvidenceCode: 'IBA',
             AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
             Aspect: 'P',
+            GeneNames: [
+              'AT3G02570',
+              'MEE31',
+              'PMI1',
+              'MATERNAL EFFECT EMBRYO ARREST 31',
+              'PHOSPHOMANNOSE ISOMERASE 1',
+              'F16B3.20',
+              'F16B3_20'
+            ],
             UniqueGeneName: 'AT3G02570',
             AlternativeGeneName: [
               'AT3G02570',
@@ -436,6 +485,7 @@ describe("Annotation queries", () => {
         EvidenceCode: 'ISM',
         AdditionalEvidence: [ '' ],
         Aspect: 'C',
+        GeneNames: [ 'AT1G09440', 'AT1G09440.2' ],
         UniqueGeneName: '',
         AlternativeGeneName: [ 'AT1G09440', 'AT1G09440.2' ],
         GeneProductType: 'protein',
@@ -454,6 +504,7 @@ describe("Annotation queries", () => {
         EvidenceCode: 'ISM',
         AdditionalEvidence: [ '' ],
         Aspect: 'C',
+        GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
         UniqueGeneName: 'Heartstopper',
         AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
         GeneProductType: 'protein',
@@ -472,6 +523,7 @@ describe("Annotation queries", () => {
         EvidenceCode: 'TAS',
         AdditionalEvidence: [ '' ],
         Aspect: 'P',
+        GeneNames: [ 'AT5G40395', 'U6acat', '67751.snRNA00001' ],
         UniqueGeneName: 'AT5G40395',
         AlternativeGeneName: [ 'AT5G40395', 'U6acat', '67751.snRNA00001' ],
         GeneProductType: 'snRNA',
@@ -490,6 +542,12 @@ describe("Annotation queries", () => {
         EvidenceCode: 'TAS',
         AdditionalEvidence: [ '' ],
         Aspect: 'P',
+        GeneNames: [
+          'AT5G46315',
+          'U6-29',
+          'U6 small nucleolar RNA29',
+          '67796.snRNA00001'
+        ],
         UniqueGeneName: 'AT5G46315',
         AlternativeGeneName: [
           'AT5G46315',
@@ -513,6 +571,15 @@ describe("Annotation queries", () => {
         EvidenceCode: 'IBA',
         AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
         Aspect: 'P',
+        GeneNames: [
+          'AT1G67070',
+          'DIN9',
+          'PMI2',
+          'DARK INDUCIBLE 9',
+          'PHOSPHOMANNOSE ISOMERASE 2',
+          'F1O19.12',
+          'F1O19_12'
+        ],
         UniqueGeneName: 'AT1G67070',
         AlternativeGeneName: [
           'AT1G67070',
@@ -539,6 +606,15 @@ describe("Annotation queries", () => {
         EvidenceCode: 'IBA',
         AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
         Aspect: 'P',
+        GeneNames: [
+          'AT3G02570',
+          'MEE31',
+          'PMI1',
+          'MATERNAL EFFECT EMBRYO ARREST 31',
+          'PHOSPHOMANNOSE ISOMERASE 1',
+          'F16B3.20',
+          'F16B3_20'
+        ],
         UniqueGeneName: 'AT3G02570',
         AlternativeGeneName: [
           'AT3G02570',
@@ -565,6 +641,7 @@ describe("Annotation queries", () => {
         EvidenceCode: 'ISM',
         AdditionalEvidence: [ '' ],
         Aspect: 'P',
+        GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
         UniqueGeneName: 'Heartstopper',
         AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
         GeneProductType: 'protein',
@@ -613,6 +690,7 @@ describe("Annotation queries", () => {
             EvidenceCode: 'ISM',
             AdditionalEvidence: [ '' ],
             Aspect: 'C',
+            GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
             UniqueGeneName: 'Heartstopper',
             AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
             GeneProductType: 'protein',
@@ -631,6 +709,7 @@ describe("Annotation queries", () => {
             EvidenceCode: 'ISM',
             AdditionalEvidence: [ '' ],
             Aspect: 'P',
+            GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
             UniqueGeneName: 'Heartstopper',
             AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
             GeneProductType: 'protein',
@@ -645,7 +724,46 @@ describe("Annotation queries", () => {
     };
 
     const queryResult = queryAnnotated(structuredData, query);
-    const expectedAnnotations = [];
+    const expectedAnnotations: Annotation[] = [
+      { Db: '',
+        DatabaseID: 'locus:1005716736',
+        DbObjectSymbol: '',
+        Invert: false,
+        GOTerm: 'GO:0005576',
+        Reference: 'TAIR:AnalysisReference:501780126',
+        EvidenceCode: 'ISM',
+        AdditionalEvidence: [ '' ],
+        Aspect: 'C',
+        GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
+        UniqueGeneName: 'Heartstopper',
+        AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+        GeneProductType: 'protein',
+        Taxon: '',
+        Date: "2018-08-31T00:00:00.000Z",
+        AssignedBy: 'TAIR',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
+      { Db: '',
+        DatabaseID: 'locus:1111111111',
+        DbObjectSymbol: '',
+        Invert: false,
+        GOTerm: 'GO:0005576',
+        Reference: 'TAIR:AnalysisReference:501780126',
+        EvidenceCode: 'ISM',
+        AdditionalEvidence: [ '' ],
+        Aspect: 'P',
+        GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
+        UniqueGeneName: 'Heartstopper',
+        AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+        GeneProductType: 'protein',
+        Taxon: '',
+        Date: "2018-08-31T00:00:00.000Z",
+        AssignedBy: 'TAIR',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
+    ];
     expect(queryResult.genes.index).toEqual(expectedGeneIndex);
     expect(queryResult.annotations.records).toEqual(expectedAnnotations);
   });

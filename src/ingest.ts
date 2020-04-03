@@ -70,6 +70,7 @@ export type Annotation = {
   AdditionalEvidence: string[],
   Aspect: Aspect,
   AnnotationStatus: AnnotationStatus,
+  GeneNames: string[],
   UniqueGeneName: string,
   AlternativeGeneName: string[],
   GeneProductType: string,
@@ -113,6 +114,7 @@ export const parseAnnotationsData = (input: string): Annotation[] | null => {
   })
     .map(item => ({
       ...item,
+      GeneNames: [item.UniqueGeneName, ...item.AlternativeGeneName],
       AnnotationStatus: evidenceCodeToAnnotationStatus(item.EvidenceCode)
     }));
 };
@@ -349,12 +351,21 @@ export type GeneIndex = {
  * keys are the Gene names and whose values are the Genes themselves.
  *
  * @param geneData The parsed Gene records.
+ * @param annotationRecords The parsed Annotation records.
  */
-const indexGenes = (geneData: Gene[]): GeneIndex => {
+export const indexGenes = (
+  geneData: Gene[],
+  annotationRecords: Annotation[] = [],
+): GeneIndex => {
   return geneData.reduce((acc, current) => {
+    const annotations = annotationRecords
+      .filter(anno => {
+        return anno.GeneNames.includes(current.GeneID);
+      });
+
     acc[current.GeneID] = {
       gene: current,
-      annotations: new Set<Annotation>(),
+      annotations: new Set(annotations),
     };
     return acc;
   }, {});
@@ -412,12 +423,12 @@ export const indexAnnotations = (
 ): AnnotationIndex => {
 
   // Index all annotations based on aspect, categorizing KNOWN_EXP but not KNOWN_OTHER
-  const expAndUnknownIndex: AnnotationIndex<Set<string>> = annotationData
+  const expAndUnknownIndex: AnnotationIndex = annotationData
     .reduce((acc, annotation) => {
       const aspect = annotation.Aspect;
       const annotationStatus = annotation.AnnotationStatus;
-      const geneId = [annotation.UniqueGeneName, ...annotation.AlternativeGeneName]
-        .find(name => !!geneIndex[name]);
+      const geneId = annotation.GeneNames
+        .find(name => geneIndex.hasOwnProperty(name));
       if (!geneId) return acc;
 
       const {gene, annotations} = geneIndex[geneId];
@@ -510,14 +521,18 @@ export type StructuredData = {
  * @param raw The raw contents of the genes and annotations files.
  */
 export const ingestData = (raw: UnstructuredText): StructuredData | null => {
-  // Parse and index Gene data
+  // Parse Gene data
   const geneData = parseGenesText(raw.genesText);
   if (!geneData) return null;
-  const geneIndex = indexGenes(geneData.records);
 
-  // Parse and index Annotation data
+  // Parse Annotation data
   const annotationData = parseAnnotationsText(raw.annotationsText);
   if (!annotationData) return null;
+
+  // Index gene data
+  const geneIndex = indexGenes(geneData.records);
+
+  // Index annotation data
   const annotationIndex = indexAnnotations(geneIndex, annotationData.records);
 
   const genes: StructuredGenes = {

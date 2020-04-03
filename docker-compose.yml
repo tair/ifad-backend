@@ -2,7 +2,7 @@ version: "3"
 
 services:
   ifad-backend:
-    image: nicholastmosher/ifad-backend:v0.2.0
+    image: nicholastmosher/ifad-backend:v0.2.1
     container_name: "ifad"
     environment:
       GENES_FILE: "/ifad/files/gene-types.txt"
@@ -10,4 +10,4 @@ services:
     ports:
       - 80:3000
     volumes:
-      - "./src/assets:/ifad/files"
+      - "./assets:/ifad/files"
