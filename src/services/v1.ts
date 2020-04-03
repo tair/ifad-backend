@@ -98,8 +98,8 @@ export class V1Service {
         return Return.NoResponse;
       case "json":
         return {
-          genes: queriedDataset.genes.records,
-          annotations: queriedDataset.annotations.records,
+          gene_count: queriedDataset.genes.records.length,
+          annotation_count: queriedDataset.annotations.records.length,
           gene_metadata: buildGenesMetadata(queriedDataset, segments_meta),
           annotation_metadata: buildAnnotationMetadata(queriedDataset, segments_meta)
         };
