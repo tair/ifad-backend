@@ -29,12 +29,28 @@ export type Segment = {
 export type Strategy = "union" | "intersection";
 
 /**
+ * The types of Gene Product Type filters that may be applied to
+ * a query result.
+ *
+ *   * all: Will return the original query result unchanged.
+ *   * include_protein: Will return only genes and annotations whose
+ *                      Gene Product Type is "protein_coding"
+ *   * exclude_pseudogene: Will return only genes and annotations whose
+ *                         Gene Product Type is _not_ "pseudogene".
+ */
+export type GeneProductTypeFilter = "all" | "include_protein" | "exclude_pseudogene";
+
+/**
  * A QueryOption describes the strategy and parameters of the query
  * to perform for `queryAnnotated`. A value of type QueryOption may
  * be exactly one of the variants given, and each variant may have
  * additional data bundled with it that further describes the nature
  * of the query to perform.
  */
+export type Query = {
+  filter: GeneProductTypeFilter,
+  option: QueryOption,
+};
 export type QueryOption = QueryGetAll | QueryWith;
 export type QueryGetAll = { tag: "QueryGetAll" };
 export type QueryWith = {
@@ -49,41 +65,47 @@ export type QueryResult = StructuredData;
  * Given the full set of Annotations and Genes and given a QueryOption,
  * return the subset of Genes and Annotations represented by the query.
  */
-export const queryAnnotated = (
+export const queryDataset = (
   dataset: StructuredData,
-  query: QueryOption,
+  query: Query,
 ): QueryResult => {
+  const { filter, option } = query;
 
-  switch (query.tag) {
+  let result: QueryResult;
+  switch (option.tag) {
     // When no segments are provided in the query, we simply return all annotations
     // and all of the genes that those annotations reference.
     case "QueryGetAll": {
-      return queryAll(dataset);
+      result = queryAll(dataset);
+      break;
     }
 
     case "QueryWith": {
 
-      switch (query.strategy) {
+      switch (option.strategy) {
         // Find the union of all of the segments given in the query options. This will
         // include all genes or annotations which match _any_ of the given segments.
         case "union": {
-          return query.segments
+          result = option.segments
             .map(segment => querySegment(dataset, segment))
-            .reduce(union)
+            .reduce(union);
+          break;
         }
 
         // Find the intersection of all of the segments given in the query options.
-        // This will include only those genes which match _all_ of the given segments.
-        // Annotations can never belong to more than one segment.
-        // TODO the intersection of ONE segment should still return annotations
+        // This will include only those genes which match _all_ of the given segments,
+        // as well as the annotations that belong to those genes.
         case "intersection": {
-          return query.segments
+           result = option.segments
             .map(segment => querySegment(dataset, segment))
             .reduce(intersect);
+           break;
         }
       }
     }
   }
+
+  return filterProductType(result, filter);
 };
 
 /**
@@ -99,9 +121,18 @@ const queryAll = (dataset: StructuredData): QueryResult => {
   const annotations = dataset.annotations.records;
 
   // Construct a list of all gene names in all annotations.
-  const geneNamesInAnnotations = new Set(
-    annotations.flatMap(a => a.GeneNames)
-  );
+  const names = dataset.annotations.names;
+  let geneNamesInAnnotations: Set<string>;
+  switch (names.tag) {
+    case "AllGenes": {
+      geneNamesInAnnotations = names.geneNames;
+      break;
+    }
+    case "NoGenes": {
+      geneNamesInAnnotations = new Set(annotations.flatMap(a => a.GeneNames))
+      break;
+    }
+  }
 
   // Group all of the genes that appear in the annotations list.
   const geneIndex = Object.entries(dataset.genes.index)
@@ -126,6 +157,7 @@ const queryAll = (dataset: StructuredData): QueryResult => {
       header: dataset.annotations.header,
       records: dataset.annotations.records,
       index: annotationIndex,
+      names,
     },
   };
 };
@@ -137,19 +169,19 @@ const querySegment = (
   const aspect = dataset.annotations.index[segment.aspect];
 
   // Collect all gene IDs that match this segment.
-  const geneIds = new Set<string>();
+  let geneIds: Set<string>;
   switch (segment.annotationStatus) {
     case "KNOWN_EXP":
-      aspect.known.exp.forEach(gene => geneIds.add(gene));
+      geneIds = aspect.known.exp;
       break;
     case "KNOWN_OTHER":
-      aspect.known.other.forEach(gene => geneIds.add(gene));
+      geneIds = aspect.known.other;
       break;
     case "UNKNOWN":
-      aspect.unknown.forEach(gene => geneIds.add(gene));
+      geneIds = aspect.unknown;
       break;
     case "UNANNOTATED":
-      aspect.unannotated.forEach(gene => geneIds.add(gene));
+      geneIds = aspect.unannotated;
       break;
   }
 
@@ -157,20 +189,19 @@ const querySegment = (
   const geneIndex: GeneIndex = geneIdsArray
     .map(geneId => dataset.genes.index[geneId])
     .reduce((acc, { gene, annotations }) => {
-      acc[gene.GeneID] = { gene, annotations };
+      const filteredAnnotations = [...annotations].filter(annotation => {
+        return annotation.Aspect === segment.aspect &&
+          annotation.AnnotationStatus === segment.annotationStatus;
+      });
+      acc[gene.GeneID] = { gene, annotations: new Set(filteredAnnotations) };
       return acc;
-    }, {});
+    }, {} as GeneIndex);
 
   const geneRecords = Object.values(geneIndex)
     .map(({ gene }) => gene);
 
   const queriedAnnotations: Annotation[] = geneIdsArray
-    .map(geneId => dataset.genes.index[geneId].annotations)
-    .flatMap(annotations => [...annotations])
-    .filter(annotation => {
-      return annotation.Aspect === segment.aspect &&
-        annotation.AnnotationStatus === segment.annotationStatus;
-    });
+    .flatMap(geneId => [...geneIndex[geneId].annotations]);
 
   const annotationIndex = indexAnnotations(geneIndex, queriedAnnotations);
 
@@ -187,6 +218,7 @@ const querySegment = (
       header: dataset.annotations.header,
       records: queriedAnnotations,
       index: annotationIndex,
+      names: { tag: "NoGenes" },
     },
   };
 };
@@ -231,6 +263,7 @@ const union = (one: StructuredData, two: StructuredData): QueryResult => {
       header: one.annotations.header,
       index: annotationIndex,
       records: annotationRecords,
+      names: { tag: "NoGenes" },
     },
   };
 };
@@ -278,6 +311,72 @@ const intersect = (one: StructuredData, two: StructuredData): QueryResult => {
       header: one.annotations.header,
       index: annotationIndex,
       records: annotationRecords,
+      names: { tag: "NoGenes" },
+    },
+  };
+};
+
+/**
+ * Given a queried dataset and a Gene Product Type filter, return
+ * the subset of the dataset which matches the filter.
+ *
+ * @param dataset The dataset to filter over.
+ * @param filter The Gene Product Type filter to use.
+ */
+export const filterProductType = (dataset: StructuredData, filter: GeneProductTypeFilter): QueryResult => {
+  let predicate: (productType: string) => boolean;
+  switch (filter) {
+    case "all": {
+      return dataset;
+    }
+    case "include_protein": {
+      predicate = (productType => productType === "protein_coding");
+      break;
+    }
+    case "exclude_pseudogene": {
+      predicate = (productType => productType !== "pseudogene");
+      break;
+    }
+  }
+
+  return _filterProductType(dataset, predicate);
+};
+
+/**
+ * Given a queried dataset, apply a filter to the Gene Product Type of
+ * the results.
+ *
+ * @param dataset The dataset to apply a filter to.
+ * @param predicate Given the Gene Product Type, determines whether
+ *                  to keep Genes with that product type.
+ */
+const _filterProductType = (dataset: StructuredData, predicate: (productType: string) => boolean): QueryResult => {
+  const geneIndex: GeneIndex = Object.entries(dataset.genes.index)
+    .filter(([_, geneElement]) => predicate(geneElement.gene.GeneProductType))
+    .reduce((acc, [geneId, geneElement]) => {
+      acc[geneId] = geneElement;
+      return acc;
+    }, {});
+  const geneRecords = Object.values(geneIndex).map(geneElement => geneElement.gene);
+
+  const annotationRecords = dataset.annotations.records.filter(annotation =>
+    annotation.GeneNames.some(name => geneIndex.hasOwnProperty(name)));
+  const annotationIndex = indexAnnotations(geneIndex, annotationRecords);
+
+  return {
+    raw: dataset.raw,
+    genes: {
+      metadata: dataset.genes.metadata,
+      header: dataset.genes.header,
+      index: geneIndex,
+      records: geneRecords,
+    },
+    annotations: {
+      metadata: dataset.annotations.metadata,
+      header: dataset.annotations.header,
+      index: annotationIndex,
+      records: annotationRecords,
+      names: { tag: "NoGenes" },
     },
   };
 };

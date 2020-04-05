@@ -1,11 +1,11 @@
 import { structuredData } from "./test_data";
-import {QueryGetAll, QueryWith, queryAnnotated, QueryOption} from "../queries";
-import {Annotation, GeneIndex} from "../ingest";
+import {queryDataset, Query} from "../queries";
+import {Annotation, Gene, GeneIndex} from "../ingest";
 
 describe("Annotation queries", () => {
 
   it("should return all annotations and genes that appear in them with FilterGetAll", () => {
-    const query: QueryGetAll = { tag: "QueryGetAll" };
+    const query: Query = { filter: "all", option: { tag: "QueryGetAll" } };
 
     const expectedGeneIndex: GeneIndex = Object.entries(structuredData.genes.index)
       // There is a specific gene which does not belong to any annotations called ATBLAHBLAH.
@@ -16,15 +16,19 @@ describe("Annotation queries", () => {
         return acc;
       }, {});
 
-    const queryResult = queryAnnotated(structuredData, query);
+    const queryResult = queryDataset(structuredData, query);
     expect(queryResult.genes.index).toEqual(expectedGeneIndex);
     expect(queryResult.annotations.records).toEqual(structuredData.annotations.records);
   });
 
   it("should choose the proper subset for FilterWith:union for C:KNOWN_EXP", () => {
-    const query: QueryWith = { tag: "QueryWith",
-      strategy: "union",
-      segments: [{ aspect: "C", annotationStatus: "KNOWN_EXP" }],
+    const query: Query = {
+      filter: "all",
+      option: {
+        tag: "QueryWith",
+        strategy: "union",
+        segments: [{ aspect: "C", annotationStatus: "KNOWN_EXP" }],
+      },
     };
 
     const expectedGeneIndex: GeneIndex = {
@@ -107,15 +111,19 @@ describe("Annotation queries", () => {
         GeneProductFormID: '' }
     ];
 
-    const queryResult = queryAnnotated(structuredData, query);
+    const queryResult = queryDataset(structuredData, query);
     expect(queryResult.genes.index).toEqual(expectedGeneIndex);
     expect(queryResult.annotations.records).toEqual(expectedAnnotations);
   });
 
   it("should choose a proper subset for FilterWith:union for C:KNOWN_OTHER", () => {
-    const query: QueryWith = { tag: "QueryWith",
-      strategy: "union",
-      segments: [{ aspect: "C", annotationStatus: "KNOWN_OTHER" }],
+    const query: Query = {
+      filter: "all",
+      option: {
+        tag: "QueryWith",
+        strategy: "union",
+        segments: [{aspect: "C", annotationStatus: "KNOWN_OTHER"}],
+      },
     };
 
     const expectedGeneIndex: GeneIndex = {
@@ -171,26 +179,7 @@ describe("Annotation queries", () => {
             AnnotationStatus: 'KNOWN_OTHER',
             AnnotationExtension: '',
             GeneProductFormID: '' },
-          { Db: '',
-            DatabaseID: 'locus:1111111111',
-            DbObjectSymbol: '',
-            Invert: false,
-            GOTerm: 'GO:0005576',
-            Reference: 'TAIR:AnalysisReference:501780126',
-            EvidenceCode: 'ISM',
-            AdditionalEvidence: [ '' ],
-            Aspect: 'P',
-            GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
-            UniqueGeneName: 'Heartstopper',
-            AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
-            GeneProductType: 'protein',
-            Taxon: '',
-            Date: "2018-08-31T00:00:00.000Z",
-            AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_OTHER',
-            AnnotationExtension: '',
-            GeneProductFormID: '' },
-        ])
+        ]),
       },
     };
 
@@ -235,18 +224,22 @@ describe("Annotation queries", () => {
         GeneProductFormID: '' },
     ];
 
-    const queryResult = queryAnnotated(structuredData, query);
+    const queryResult = queryDataset(structuredData, query);
     expect(queryResult.genes.index).toEqual(expectedGeneIndex);
     expect(queryResult.annotations.records).toEqual(expectedAnnotations);
   });
 
   it("should return the union of results when using FilterWith:union for C:KNOWN_OTHER,P:KNOWN_OTHER", () => {
-    const query: QueryWith = { tag: "QueryWith",
-      strategy: "union",
-      segments: [
-        { aspect: "C", annotationStatus: "KNOWN_OTHER" },
-        { aspect: "P", annotationStatus: "KNOWN_OTHER" },
-      ],
+    const query: Query = {
+      filter: "all",
+      option: {
+        tag: "QueryWith",
+        strategy: "union",
+        segments: [
+          {aspect: "C", annotationStatus: "KNOWN_OTHER"},
+          {aspect: "P", annotationStatus: "KNOWN_OTHER"},
+        ],
+      },
     };
 
     const expectedGeneIndex: GeneIndex = {
@@ -654,7 +647,7 @@ describe("Annotation queries", () => {
     ];
 
     // Convert annotations lists to Sets in order to compare contents without order.
-    const queriedDataset = queryAnnotated(structuredData, query);
+    const queriedDataset = queryDataset(structuredData, query);
     const genes = queriedDataset.genes.index;
     const outputAnnotationsSet = new Set(queriedDataset.annotations.records);
     const expectedAnnotationsSet = new Set(expectedAnnotations);
@@ -664,12 +657,16 @@ describe("Annotation queries", () => {
   });
 
   it("should find a single gene for QueryWith:intersection for C:KNOWN_OTHER,P:KNOWN_OTHER", () => {
-    const query: QueryOption = { tag: "QueryWith",
-      strategy: "intersection",
-      segments: [
-        { aspect: "C", annotationStatus: "KNOWN_OTHER" },
-        { aspect: "P", annotationStatus: "KNOWN_OTHER" },
-      ],
+    const query: Query = {
+      filter: "all",
+      option: {
+        tag: "QueryWith",
+        strategy: "intersection",
+        segments: [
+          {aspect: "C", annotationStatus: "KNOWN_OTHER"},
+          {aspect: "P", annotationStatus: "KNOWN_OTHER"},
+        ],
+      },
     };
 
     const expectedGeneIndex: GeneIndex = {
@@ -723,7 +720,7 @@ describe("Annotation queries", () => {
       },
     };
 
-    const queryResult = queryAnnotated(structuredData, query);
+    const queryResult = queryDataset(structuredData, query);
     const expectedAnnotations: Annotation[] = [
       { Db: '',
         DatabaseID: 'locus:1005716736',
@@ -764,6 +761,327 @@ describe("Annotation queries", () => {
         AnnotationExtension: '',
         GeneProductFormID: '' },
     ];
+    expect(queryResult.genes.index).toEqual(expectedGeneIndex);
+    expect(queryResult.annotations.records).toEqual(expectedAnnotations);
+  });
+
+  it("should filter out pseudogenes", () => {
+    const query: Query = {
+      filter: "exclude_pseudogene",
+      option: {
+        tag: "QueryWith",
+        strategy: "union",
+        segments: [
+          { aspect: "C", annotationStatus: "KNOWN_EXP" },
+          { aspect: "F", annotationStatus: "KNOWN_OTHER" },
+        ],
+      },
+    };
+
+    const queryResult = queryDataset(structuredData, query);
+    const expectedGeneIndex: GeneIndex = {
+      AT1G65290: {
+        gene: {
+          GeneID: "AT1G65290",
+          GeneProductType: "protein_coding"
+        },
+        annotations: new Set([
+          {
+            Db: '',
+            DatabaseID: 'locus:2206300',
+            DbObjectSymbol: '',
+            Invert: false,
+            GOTerm: 'GO:0000035',
+            Reference: 'TAIR:Communication:501741973',
+            EvidenceCode: 'IBA',
+            AdditionalEvidence: ['PANTHER:PTN000466551', 'EcoGene:EG50003', 'UniProtKB:P9WQF3'],
+            Aspect: 'F',
+            GeneNames: [
+              'AT1G65290',
+              'mtACP2',
+              'mitochondrial acyl carrier protein 2',
+              'T8F5.6',
+              'T8F5_6'
+            ],
+            UniqueGeneName: 'AT1G65290',
+            AlternativeGeneName: [
+              'AT1G65290',
+              'mtACP2',
+              'mitochondrial acyl carrier protein 2',
+              'T8F5.6',
+              'T8F5_6'
+            ],
+            GeneProductType: 'protein',
+            Taxon: '',
+            Date: "2018-08-03T00:00:00.000Z",
+            AssignedBy: 'GOC',
+            AnnotationStatus: 'KNOWN_OTHER',
+            AnnotationExtension: '',
+            GeneProductFormID: ''
+          },
+        ])
+      },
+    };
+
+    const expectedAnnotations: Annotation[] = [
+      {
+        Db: '',
+        DatabaseID: 'locus:2206300',
+        DbObjectSymbol: '',
+        Invert: false,
+        GOTerm: 'GO:0000035',
+        Reference: 'TAIR:Communication:501741973',
+        EvidenceCode: 'IBA',
+        AdditionalEvidence: ['PANTHER:PTN000466551', 'EcoGene:EG50003', 'UniProtKB:P9WQF3'],
+        Aspect: 'F',
+        GeneNames: [
+          'AT1G65290',
+          'mtACP2',
+          'mitochondrial acyl carrier protein 2',
+          'T8F5.6',
+          'T8F5_6'
+        ],
+        UniqueGeneName: 'AT1G65290',
+        AlternativeGeneName: [
+          'AT1G65290',
+          'mtACP2',
+          'mitochondrial acyl carrier protein 2',
+          'T8F5.6',
+          'T8F5_6'
+        ],
+        GeneProductType: 'protein',
+        Taxon: '',
+        Date: "2018-08-03T00:00:00.000Z",
+        AssignedBy: 'GOC',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: ''
+      },
+    ];
+
+    expect(queryResult.genes.index).toEqual(expectedGeneIndex);
+    expect(queryResult.annotations.records).toEqual(expectedAnnotations);
+  });
+
+  it("should include only protein_coding genes", () => {
+    const query: Query = {
+      filter: "include_protein",
+      option: {
+        tag: "QueryWith",
+        segments: [{ aspect: "P", annotationStatus: "KNOWN_OTHER" }],
+        strategy: "union",
+      }
+    };
+
+    const expectedGeneIndex: GeneIndex = {
+      AT1G67070: {
+        gene: {
+          GeneID: "AT1G67070",
+          GeneProductType: "protein_coding"
+        },
+        annotations: new Set([
+          { Db: '',
+            DatabaseID: 'locus:2019748',
+            DbObjectSymbol: '',
+            Invert: false,
+            GOTerm: 'GO:0000032',
+            Reference: 'TAIR:Communication:501741973',
+            EvidenceCode: 'IBA',
+            AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
+            Aspect: 'P',
+            GeneNames: [
+              'AT1G67070',
+              'DIN9',
+              'PMI2',
+              'DARK INDUCIBLE 9',
+              'PHOSPHOMANNOSE ISOMERASE 2',
+              'F1O19.12',
+              'F1O19_12'
+            ],
+            UniqueGeneName: 'AT1G67070',
+            AlternativeGeneName: [
+              'AT1G67070',
+              'DIN9',
+              'PMI2',
+              'DARK INDUCIBLE 9',
+              'PHOSPHOMANNOSE ISOMERASE 2',
+              'F1O19.12',
+              'F1O19_12'
+            ],
+            GeneProductType: 'protein',
+            Taxon: '',
+            Date: "2018-06-15T00:00:00.000Z",
+            AssignedBy: 'GOC',
+            AnnotationStatus: 'KNOWN_OTHER',
+            AnnotationExtension: '',
+            GeneProductFormID: '' },
+        ])
+      },
+      AT3G02570: {
+        gene: {
+          GeneID: "AT3G02570",
+          GeneProductType: "protein_coding"
+        },
+        annotations: new Set([
+          { Db: '',
+            DatabaseID: 'locus:2076864',
+            DbObjectSymbol: '',
+            Invert: false,
+            GOTerm: 'GO:0000032',
+            Reference: 'TAIR:Communication:501741973',
+            EvidenceCode: 'IBA',
+            AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
+            Aspect: 'P',
+            GeneNames: [
+              'AT3G02570',
+              'MEE31',
+              'PMI1',
+              'MATERNAL EFFECT EMBRYO ARREST 31',
+              'PHOSPHOMANNOSE ISOMERASE 1',
+              'F16B3.20',
+              'F16B3_20'
+            ],
+            UniqueGeneName: 'AT3G02570',
+            AlternativeGeneName: [
+              'AT3G02570',
+              'MEE31',
+              'PMI1',
+              'MATERNAL EFFECT EMBRYO ARREST 31',
+              'PHOSPHOMANNOSE ISOMERASE 1',
+              'F16B3.20',
+              'F16B3_20'
+            ],
+            GeneProductType: 'protein',
+            Date: "2018-11-01T00:00:00.000Z",
+            Taxon: '',
+            AssignedBy: 'GOC',
+            AnnotationStatus: 'KNOWN_OTHER',
+            AnnotationExtension: '',
+            GeneProductFormID: '' },
+        ])
+      },
+      AT1G08845: {
+        gene: {
+          GeneID: "AT1G08845",
+          GeneProductType: "protein_coding"
+        },
+        annotations: new Set([
+          { Db: '',
+            DatabaseID: 'locus:1111111111',
+            DbObjectSymbol: '',
+            Invert: false,
+            GOTerm: 'GO:0005576',
+            Reference: 'TAIR:AnalysisReference:501780126',
+            EvidenceCode: 'ISM',
+            AdditionalEvidence: [ '' ],
+            Aspect: 'P',
+            GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
+            UniqueGeneName: 'Heartstopper',
+            AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+            GeneProductType: 'protein',
+            Taxon: '',
+            Date: "2018-08-31T00:00:00.000Z",
+            AssignedBy: 'TAIR',
+            AnnotationStatus: 'KNOWN_OTHER',
+            AnnotationExtension: '',
+            GeneProductFormID: '' },
+        ])
+      },
+    };
+
+    const expectedAnnotations: Annotation[] = [
+      { Db: '',
+        DatabaseID: 'locus:2019748',
+        DbObjectSymbol: '',
+        Invert: false,
+        GOTerm: 'GO:0000032',
+        Reference: 'TAIR:Communication:501741973',
+        EvidenceCode: 'IBA',
+        AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
+        Aspect: 'P',
+        GeneNames: [
+          'AT1G67070',
+          'DIN9',
+          'PMI2',
+          'DARK INDUCIBLE 9',
+          'PHOSPHOMANNOSE ISOMERASE 2',
+          'F1O19.12',
+          'F1O19_12'
+        ],
+        UniqueGeneName: 'AT1G67070',
+        AlternativeGeneName: [
+          'AT1G67070',
+          'DIN9',
+          'PMI2',
+          'DARK INDUCIBLE 9',
+          'PHOSPHOMANNOSE ISOMERASE 2',
+          'F1O19.12',
+          'F1O19_12'
+        ],
+        GeneProductType: 'protein',
+        Taxon: '',
+        Date: "2018-06-15T00:00:00.000Z",
+        AssignedBy: 'GOC',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
+      { Db: '',
+        DatabaseID: 'locus:2076864',
+        DbObjectSymbol: '',
+        Invert: false,
+        GOTerm: 'GO:0000032',
+        Reference: 'TAIR:Communication:501741973',
+        EvidenceCode: 'IBA',
+        AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
+        Aspect: 'P',
+        GeneNames: [
+          'AT3G02570',
+          'MEE31',
+          'PMI1',
+          'MATERNAL EFFECT EMBRYO ARREST 31',
+          'PHOSPHOMANNOSE ISOMERASE 1',
+          'F16B3.20',
+          'F16B3_20'
+        ],
+        UniqueGeneName: 'AT3G02570',
+        AlternativeGeneName: [
+          'AT3G02570',
+          'MEE31',
+          'PMI1',
+          'MATERNAL EFFECT EMBRYO ARREST 31',
+          'PHOSPHOMANNOSE ISOMERASE 1',
+          'F16B3.20',
+          'F16B3_20'
+        ],
+        GeneProductType: 'protein',
+        Date: "2018-11-01T00:00:00.000Z",
+        Taxon: '',
+        AssignedBy: 'GOC',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
+      { Db: '',
+        DatabaseID: 'locus:1111111111',
+        DbObjectSymbol: '',
+        Invert: false,
+        GOTerm: 'GO:0005576',
+        Reference: 'TAIR:AnalysisReference:501780126',
+        EvidenceCode: 'ISM',
+        AdditionalEvidence: [ '' ],
+        Aspect: 'P',
+        GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
+        UniqueGeneName: 'Heartstopper',
+        AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+        GeneProductType: 'protein',
+        Taxon: '',
+        Date: "2018-08-31T00:00:00.000Z",
+        AssignedBy: 'TAIR',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
+    ];
+
+    const queryResult = queryDataset(structuredData, query);
     expect(queryResult.genes.index).toEqual(expectedGeneIndex);
     expect(queryResult.annotations.records).toEqual(expectedAnnotations);
   });
