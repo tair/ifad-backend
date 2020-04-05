@@ -474,6 +474,15 @@ export const indexAnnotations = (
   return fullIndex;
 };
 
+export type ReferencedGeneNames = AllGenes | NoGenes;
+export type AllGenes = {
+  tag: "AllGenes",
+  geneNames: Set<string>,
+}
+export type NoGenes = {
+  tag: "NoGenes",
+};
+
 /**
  * Contains all of the required raw input to the top-level ingestData function.
  */
@@ -502,6 +511,7 @@ export type StructuredAnnotations = {
   header: string,
   records: Annotation[],
   index: AnnotationIndex,
+  names: ReferencedGeneNames,
 };
 
 /**
@@ -542,12 +552,15 @@ export const ingestData = (raw: UnstructuredText): StructuredData | null => {
     index: geneIndex,
   };
 
+  const geneNames = new Set(annotationData.records.flatMap(a => a.GeneNames));
+
   // Store un-indexed and indexed Annotation data together
   const annotations: StructuredAnnotations = {
     metadata: annotationData.metadata,
     header: annotationData.header,
     records: annotationData.records,
     index: annotationIndex,
+    names: { tag: "AllGenes", geneNames },
   };
 
   // Return all structured data

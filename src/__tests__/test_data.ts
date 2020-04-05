@@ -329,6 +329,7 @@ export const structuredData: StructuredData = {
     header: "Column A, Column B, Column C",
     records: annotationRecords,
     index: indexAnnotations(geneIndex, annotationRecords),
+    names: { tag: "NoGenes" },
   },
   genes: {
     metadata: "!gene metadata",

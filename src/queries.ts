@@ -121,9 +121,18 @@ const queryAll = (dataset: StructuredData): QueryResult => {
   const annotations = dataset.annotations.records;
 
   // Construct a list of all gene names in all annotations.
-  const geneNamesInAnnotations = new Set(
-    annotations.flatMap(a => a.GeneNames)
-  );
+  const names = dataset.annotations.names;
+  let geneNamesInAnnotations: Set<string>;
+  switch (names.tag) {
+    case "AllGenes": {
+      geneNamesInAnnotations = names.geneNames;
+      break;
+    }
+    case "NoGenes": {
+      geneNamesInAnnotations = new Set(annotations.flatMap(a => a.GeneNames))
+      break;
+    }
+  }
 
   // Group all of the genes that appear in the annotations list.
   const geneIndex = Object.entries(dataset.genes.index)
@@ -148,6 +157,7 @@ const queryAll = (dataset: StructuredData): QueryResult => {
       header: dataset.annotations.header,
       records: dataset.annotations.records,
       index: annotationIndex,
+      names,
     },
   };
 };
@@ -208,6 +218,7 @@ const querySegment = (
       header: dataset.annotations.header,
       records: queriedAnnotations,
       index: annotationIndex,
+      names: { tag: "NoGenes" },
     },
   };
 };
@@ -252,6 +263,7 @@ const union = (one: StructuredData, two: StructuredData): QueryResult => {
       header: one.annotations.header,
       index: annotationIndex,
       records: annotationRecords,
+      names: { tag: "NoGenes" },
     },
   };
 };
@@ -299,6 +311,7 @@ const intersect = (one: StructuredData, two: StructuredData): QueryResult => {
       header: one.annotations.header,
       index: annotationIndex,
       records: annotationRecords,
+      names: { tag: "NoGenes" },
     },
   };
 };
@@ -363,6 +376,7 @@ const _filterProductType = (dataset: StructuredData, predicate: (productType: st
       header: dataset.annotations.header,
       index: annotationIndex,
       records: annotationRecords,
+      names: { tag: "NoGenes" },
     },
   };
 };
