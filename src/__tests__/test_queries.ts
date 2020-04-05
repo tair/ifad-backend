@@ -1,6 +1,6 @@
 import { structuredData } from "./test_data";
 import {queryDataset, Query} from "../queries";
-import {Annotation, GeneIndex} from "../ingest";
+import {Annotation, Gene, GeneIndex} from "../ingest";
 
 describe("Annotation queries", () => {
 
@@ -179,26 +179,7 @@ describe("Annotation queries", () => {
             AnnotationStatus: 'KNOWN_OTHER',
             AnnotationExtension: '',
             GeneProductFormID: '' },
-          { Db: '',
-            DatabaseID: 'locus:1111111111',
-            DbObjectSymbol: '',
-            Invert: false,
-            GOTerm: 'GO:0005576',
-            Reference: 'TAIR:AnalysisReference:501780126',
-            EvidenceCode: 'ISM',
-            AdditionalEvidence: [ '' ],
-            Aspect: 'P',
-            GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
-            UniqueGeneName: 'Heartstopper',
-            AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
-            GeneProductType: 'protein',
-            Taxon: '',
-            Date: "2018-08-31T00:00:00.000Z",
-            AssignedBy: 'TAIR',
-            AnnotationStatus: 'KNOWN_OTHER',
-            AnnotationExtension: '',
-            GeneProductFormID: '' },
-        ])
+        ]),
       },
     };
 
@@ -780,6 +761,327 @@ describe("Annotation queries", () => {
         AnnotationExtension: '',
         GeneProductFormID: '' },
     ];
+    expect(queryResult.genes.index).toEqual(expectedGeneIndex);
+    expect(queryResult.annotations.records).toEqual(expectedAnnotations);
+  });
+
+  it("should filter out pseudogenes", () => {
+    const query: Query = {
+      filter: "exclude_pseudogene",
+      option: {
+        tag: "QueryWith",
+        strategy: "union",
+        segments: [
+          { aspect: "C", annotationStatus: "KNOWN_EXP" },
+          { aspect: "F", annotationStatus: "KNOWN_OTHER" },
+        ],
+      },
+    };
+
+    const queryResult = queryDataset(structuredData, query);
+    const expectedGeneIndex: GeneIndex = {
+      AT1G65290: {
+        gene: {
+          GeneID: "AT1G65290",
+          GeneProductType: "protein_coding"
+        },
+        annotations: new Set([
+          {
+            Db: '',
+            DatabaseID: 'locus:2206300',
+            DbObjectSymbol: '',
+            Invert: false,
+            GOTerm: 'GO:0000035',
+            Reference: 'TAIR:Communication:501741973',
+            EvidenceCode: 'IBA',
+            AdditionalEvidence: ['PANTHER:PTN000466551', 'EcoGene:EG50003', 'UniProtKB:P9WQF3'],
+            Aspect: 'F',
+            GeneNames: [
+              'AT1G65290',
+              'mtACP2',
+              'mitochondrial acyl carrier protein 2',
+              'T8F5.6',
+              'T8F5_6'
+            ],
+            UniqueGeneName: 'AT1G65290',
+            AlternativeGeneName: [
+              'AT1G65290',
+              'mtACP2',
+              'mitochondrial acyl carrier protein 2',
+              'T8F5.6',
+              'T8F5_6'
+            ],
+            GeneProductType: 'protein',
+            Taxon: '',
+            Date: "2018-08-03T00:00:00.000Z",
+            AssignedBy: 'GOC',
+            AnnotationStatus: 'KNOWN_OTHER',
+            AnnotationExtension: '',
+            GeneProductFormID: ''
+          },
+        ])
+      },
+    };
+
+    const expectedAnnotations: Annotation[] = [
+      {
+        Db: '',
+        DatabaseID: 'locus:2206300',
+        DbObjectSymbol: '',
+        Invert: false,
+        GOTerm: 'GO:0000035',
+        Reference: 'TAIR:Communication:501741973',
+        EvidenceCode: 'IBA',
+        AdditionalEvidence: ['PANTHER:PTN000466551', 'EcoGene:EG50003', 'UniProtKB:P9WQF3'],
+        Aspect: 'F',
+        GeneNames: [
+          'AT1G65290',
+          'mtACP2',
+          'mitochondrial acyl carrier protein 2',
+          'T8F5.6',
+          'T8F5_6'
+        ],
+        UniqueGeneName: 'AT1G65290',
+        AlternativeGeneName: [
+          'AT1G65290',
+          'mtACP2',
+          'mitochondrial acyl carrier protein 2',
+          'T8F5.6',
+          'T8F5_6'
+        ],
+        GeneProductType: 'protein',
+        Taxon: '',
+        Date: "2018-08-03T00:00:00.000Z",
+        AssignedBy: 'GOC',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: ''
+      },
+    ];
+
+    expect(queryResult.genes.index).toEqual(expectedGeneIndex);
+    expect(queryResult.annotations.records).toEqual(expectedAnnotations);
+  });
+
+  it("should include only protein_coding genes", () => {
+    const query: Query = {
+      filter: "include_protein",
+      option: {
+        tag: "QueryWith",
+        segments: [{ aspect: "P", annotationStatus: "KNOWN_OTHER" }],
+        strategy: "union",
+      }
+    };
+
+    const expectedGeneIndex: GeneIndex = {
+      AT1G67070: {
+        gene: {
+          GeneID: "AT1G67070",
+          GeneProductType: "protein_coding"
+        },
+        annotations: new Set([
+          { Db: '',
+            DatabaseID: 'locus:2019748',
+            DbObjectSymbol: '',
+            Invert: false,
+            GOTerm: 'GO:0000032',
+            Reference: 'TAIR:Communication:501741973',
+            EvidenceCode: 'IBA',
+            AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
+            Aspect: 'P',
+            GeneNames: [
+              'AT1G67070',
+              'DIN9',
+              'PMI2',
+              'DARK INDUCIBLE 9',
+              'PHOSPHOMANNOSE ISOMERASE 2',
+              'F1O19.12',
+              'F1O19_12'
+            ],
+            UniqueGeneName: 'AT1G67070',
+            AlternativeGeneName: [
+              'AT1G67070',
+              'DIN9',
+              'PMI2',
+              'DARK INDUCIBLE 9',
+              'PHOSPHOMANNOSE ISOMERASE 2',
+              'F1O19.12',
+              'F1O19_12'
+            ],
+            GeneProductType: 'protein',
+            Taxon: '',
+            Date: "2018-06-15T00:00:00.000Z",
+            AssignedBy: 'GOC',
+            AnnotationStatus: 'KNOWN_OTHER',
+            AnnotationExtension: '',
+            GeneProductFormID: '' },
+        ])
+      },
+      AT3G02570: {
+        gene: {
+          GeneID: "AT3G02570",
+          GeneProductType: "protein_coding"
+        },
+        annotations: new Set([
+          { Db: '',
+            DatabaseID: 'locus:2076864',
+            DbObjectSymbol: '',
+            Invert: false,
+            GOTerm: 'GO:0000032',
+            Reference: 'TAIR:Communication:501741973',
+            EvidenceCode: 'IBA',
+            AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
+            Aspect: 'P',
+            GeneNames: [
+              'AT3G02570',
+              'MEE31',
+              'PMI1',
+              'MATERNAL EFFECT EMBRYO ARREST 31',
+              'PHOSPHOMANNOSE ISOMERASE 1',
+              'F16B3.20',
+              'F16B3_20'
+            ],
+            UniqueGeneName: 'AT3G02570',
+            AlternativeGeneName: [
+              'AT3G02570',
+              'MEE31',
+              'PMI1',
+              'MATERNAL EFFECT EMBRYO ARREST 31',
+              'PHOSPHOMANNOSE ISOMERASE 1',
+              'F16B3.20',
+              'F16B3_20'
+            ],
+            GeneProductType: 'protein',
+            Date: "2018-11-01T00:00:00.000Z",
+            Taxon: '',
+            AssignedBy: 'GOC',
+            AnnotationStatus: 'KNOWN_OTHER',
+            AnnotationExtension: '',
+            GeneProductFormID: '' },
+        ])
+      },
+      AT1G08845: {
+        gene: {
+          GeneID: "AT1G08845",
+          GeneProductType: "protein_coding"
+        },
+        annotations: new Set([
+          { Db: '',
+            DatabaseID: 'locus:1111111111',
+            DbObjectSymbol: '',
+            Invert: false,
+            GOTerm: 'GO:0005576',
+            Reference: 'TAIR:AnalysisReference:501780126',
+            EvidenceCode: 'ISM',
+            AdditionalEvidence: [ '' ],
+            Aspect: 'P',
+            GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
+            UniqueGeneName: 'Heartstopper',
+            AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+            GeneProductType: 'protein',
+            Taxon: '',
+            Date: "2018-08-31T00:00:00.000Z",
+            AssignedBy: 'TAIR',
+            AnnotationStatus: 'KNOWN_OTHER',
+            AnnotationExtension: '',
+            GeneProductFormID: '' },
+        ])
+      },
+    };
+
+    const expectedAnnotations: Annotation[] = [
+      { Db: '',
+        DatabaseID: 'locus:2019748',
+        DbObjectSymbol: '',
+        Invert: false,
+        GOTerm: 'GO:0000032',
+        Reference: 'TAIR:Communication:501741973',
+        EvidenceCode: 'IBA',
+        AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
+        Aspect: 'P',
+        GeneNames: [
+          'AT1G67070',
+          'DIN9',
+          'PMI2',
+          'DARK INDUCIBLE 9',
+          'PHOSPHOMANNOSE ISOMERASE 2',
+          'F1O19.12',
+          'F1O19_12'
+        ],
+        UniqueGeneName: 'AT1G67070',
+        AlternativeGeneName: [
+          'AT1G67070',
+          'DIN9',
+          'PMI2',
+          'DARK INDUCIBLE 9',
+          'PHOSPHOMANNOSE ISOMERASE 2',
+          'F1O19.12',
+          'F1O19_12'
+        ],
+        GeneProductType: 'protein',
+        Taxon: '',
+        Date: "2018-06-15T00:00:00.000Z",
+        AssignedBy: 'GOC',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
+      { Db: '',
+        DatabaseID: 'locus:2076864',
+        DbObjectSymbol: '',
+        Invert: false,
+        GOTerm: 'GO:0000032',
+        Reference: 'TAIR:Communication:501741973',
+        EvidenceCode: 'IBA',
+        AdditionalEvidence: [ 'PANTHER:PTN000034017', 'SGD:S000000805' ],
+        Aspect: 'P',
+        GeneNames: [
+          'AT3G02570',
+          'MEE31',
+          'PMI1',
+          'MATERNAL EFFECT EMBRYO ARREST 31',
+          'PHOSPHOMANNOSE ISOMERASE 1',
+          'F16B3.20',
+          'F16B3_20'
+        ],
+        UniqueGeneName: 'AT3G02570',
+        AlternativeGeneName: [
+          'AT3G02570',
+          'MEE31',
+          'PMI1',
+          'MATERNAL EFFECT EMBRYO ARREST 31',
+          'PHOSPHOMANNOSE ISOMERASE 1',
+          'F16B3.20',
+          'F16B3_20'
+        ],
+        GeneProductType: 'protein',
+        Date: "2018-11-01T00:00:00.000Z",
+        Taxon: '',
+        AssignedBy: 'GOC',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
+      { Db: '',
+        DatabaseID: 'locus:1111111111',
+        DbObjectSymbol: '',
+        Invert: false,
+        GOTerm: 'GO:0005576',
+        Reference: 'TAIR:AnalysisReference:501780126',
+        EvidenceCode: 'ISM',
+        AdditionalEvidence: [ '' ],
+        Aspect: 'P',
+        GeneNames: [ 'AT1G08845', 'AT1G08845.2' ],
+        UniqueGeneName: 'Heartstopper',
+        AlternativeGeneName: [ 'AT1G08845', 'AT1G08845.2' ],
+        GeneProductType: 'protein',
+        Taxon: '',
+        Date: "2018-08-31T00:00:00.000Z",
+        AssignedBy: 'TAIR',
+        AnnotationStatus: 'KNOWN_OTHER',
+        AnnotationExtension: '',
+        GeneProductFormID: '' },
+    ];
+
+    const queryResult = queryDataset(structuredData, query);
     expect(queryResult.genes.index).toEqual(expectedGeneIndex);
     expect(queryResult.annotations.records).toEqual(expectedAnnotations);
   });

@@ -159,19 +159,19 @@ const querySegment = (
   const aspect = dataset.annotations.index[segment.aspect];
 
   // Collect all gene IDs that match this segment.
-  const geneIds = new Set<string>();
+  let geneIds: Set<string>;
   switch (segment.annotationStatus) {
     case "KNOWN_EXP":
-      aspect.known.exp.forEach(gene => geneIds.add(gene));
+      geneIds = aspect.known.exp;
       break;
     case "KNOWN_OTHER":
-      aspect.known.other.forEach(gene => geneIds.add(gene));
+      geneIds = aspect.known.other;
       break;
     case "UNKNOWN":
-      aspect.unknown.forEach(gene => geneIds.add(gene));
+      geneIds = aspect.unknown;
       break;
     case "UNANNOTATED":
-      aspect.unannotated.forEach(gene => geneIds.add(gene));
+      geneIds = aspect.unannotated;
       break;
   }
 
@@ -179,20 +179,19 @@ const querySegment = (
   const geneIndex: GeneIndex = geneIdsArray
     .map(geneId => dataset.genes.index[geneId])
     .reduce((acc, { gene, annotations }) => {
-      acc[gene.GeneID] = { gene, annotations };
+      const filteredAnnotations = [...annotations].filter(annotation => {
+        return annotation.Aspect === segment.aspect &&
+          annotation.AnnotationStatus === segment.annotationStatus;
+      });
+      acc[gene.GeneID] = { gene, annotations: new Set(filteredAnnotations) };
       return acc;
-    }, {});
+    }, {} as GeneIndex);
 
   const geneRecords = Object.values(geneIndex)
     .map(({ gene }) => gene);
 
   const queriedAnnotations: Annotation[] = geneIdsArray
-    .map(geneId => dataset.genes.index[geneId].annotations)
-    .flatMap(annotations => [...annotations])
-    .filter(annotation => {
-      return annotation.Aspect === segment.aspect &&
-        annotation.AnnotationStatus === segment.annotationStatus;
-    });
+    .flatMap(geneId => [...geneIndex[geneId].annotations]);
 
   const annotationIndex = indexAnnotations(geneIndex, queriedAnnotations);
 
