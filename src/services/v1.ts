@@ -1,9 +1,11 @@
 import {Errors, GET, Path, QueryParam, Return, ContextResponse} from "typescript-rest";
-import {AnnotationStatus, Aspect, makeAnnotationIndex} from "../ingest";
-import {QueryOption, Segment, Strategy} from "../queries";
+import {GeneProductTypeFilter, Query, queryDataset, QueryOption, Segment, Strategy} from "../queries";
+import {AnnotationStatus, Aspect, makeAnnotationIndex, StructuredData} from "../ingest";
 import {annotationsToGAF, genesToCSV, buildGenesMetadata, buildAnnotationMetadata} from '../export';
-import { getDataset } from '../data_fetcher';
 import express from "express";
+import { getDataset } from '../data_fetcher';
+
+const dataset: StructuredData = getDataset();
 
 type Format = "gaf" | "gene-csv" | "json";
 
@@ -63,15 +65,8 @@ export class V1Service {
       segments_meta.strategy = strategy;
     }
 
-    const dataset = getDataset();
-
-    // TODO include unannotated genes
-    const queriedDataset = queryAnnotated(dataset, query);
-
-    // TODO include unannotated genes
-    const format = validateFormat(maybeFormat);
-
-    const filters_meta = {filters: segments.map(f=>`${f.aspect}-${f.annotationStatus}`).join(", ")};
+    const query: Query = { filter, option: option };
+    const queriedDataset = queryDataset(dataset, query);
 
     switch (format) {
       case "gaf":
@@ -100,9 +95,17 @@ export class V1Service {
 
   @Path("/wgs_segments")
   @GET
-  get_wgs() {
-    const dataset = getDataset();
-    const totalGeneCount = Object.keys(dataset.genes.index).length;
+  get_wgs(
+    /**
+     * ?filter=""
+     * This filter describes which subset of Genes will be used for querying.
+     * The option for filter are "all" | "include_protein" | "exclude_pseudogene".
+     */
+    @QueryParam("filter") maybeFilter: string = "exclude_pseudogene",
+  ) {
+    const filter = validateFilter(maybeFilter);
+    const query: Query = { filter, option: {tag: "QueryGetAll"} };
+    let queryResult = queryDataset(dataset, query);
 
     const totalGeneCount = Object.keys(queryResult.genes.index).length;
     const result = Object.entries(queryResult.annotations.index)
