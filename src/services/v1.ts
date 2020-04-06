@@ -1,27 +1,11 @@
-import {readFileSync} from "fs";
-import {resolve} from "path";
 import {Errors, GET, Path, QueryParam, Return, ContextResponse} from "typescript-rest";
 import {GeneProductTypeFilter, Query, queryDataset, QueryOption, Segment, Strategy} from "../queries";
-import {
-  AnnotationStatus,
-  Aspect,
-  ingestData,
-  makeAnnotationIndex,
-  StructuredData,
-  UnstructuredText
-} from "../ingest";
+import {AnnotationStatus, Aspect, makeAnnotationIndex, StructuredData} from "../ingest";
 import {annotationsToGAF, genesToCSV, buildGenesMetadata, buildAnnotationMetadata} from '../export';
 import express from "express";
+import { getDataset } from '../data_fetcher';
 
-// TODO use data fetcher rather than files.
-console.log("Begin reading data");
-const genesText = readFileSync(process.env["GENES_FILE"] || resolve("assets/gene-types.txt")).toString();
-const annotationsText = readFileSync(process.env["ANNOTATIONS_FILE"] || resolve("assets/tair.gaf")).toString();
-const unstructuredText: UnstructuredText = {genesText, annotationsText};
-const maybeDataset = ingestData(unstructuredText);
-if (!maybeDataset) throw new Error("failed to parse data");
-const dataset: StructuredData = maybeDataset;
-console.log("Finished parsing data");
+const dataset: StructuredData = getDataset();
 
 type Format = "gaf" | "gene-csv" | "json";
 
