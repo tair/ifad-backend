@@ -765,9 +765,9 @@ describe("Annotation queries", () => {
     expect(queryResult.annotations.records).toEqual(expectedAnnotations);
   });
 
-  it("should filter out pseudogenes", () => {
+  it("should include only protein_coding genes", () => {
     const query: Query = {
-      filter: "exclude_pseudogene",
+      filter: "include_protein",
       option: {
         tag: "QueryWith",
         strategy: "union",
