@@ -2,7 +2,7 @@ version: "3"
 
 services:
   ifad-backend:
-    image: shearerj/ifad-backend:v0.2.3
+    image: phoenixbioinformatics/ifad-backend:v0.2.4
     container_name: "ifad"
     restart: "always"
     environment:

@@ -1,4 +1,4 @@
-FROM shearerj/ifad-frontend:v0.2.3 AS frontend
+FROM phoenixbioinformatics/ifad-frontend:v0.2.4 AS frontend
 
 FROM node:lts as backend
 
