@@ -2,7 +2,7 @@ version: "3"
 
 services:
   ifad-backend:
-    image: nicholastmosher/ifad-backend:v0.2.2
+    image: shearerj/ifad-backend:v0.2.3
     container_name: "ifad"
     restart: "always"
     environment:
