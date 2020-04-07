@@ -1,7 +1,15 @@
 import {readFileSync} from "fs";
 import {resolve} from "path";
 import {Errors, GET, Path, QueryParam, Return, ContextResponse} from "typescript-rest";
-import {GeneProductTypeFilter, Query, queryDataset, QueryOption, Segment, Strategy} from "../queries";
+import {
+  filterProductType,
+  GeneProductTypeFilter,
+  Query,
+  queryDataset,
+  QueryOption,
+  Segment,
+  Strategy
+} from "../queries";
 import {
   AnnotationStatus,
   Aspect,
@@ -20,7 +28,8 @@ const annotationsText = readFileSync(process.env["ANNOTATIONS_FILE"] || resolve(
 const unstructuredText: UnstructuredText = {genesText, annotationsText};
 const maybeDataset = ingestData(unstructuredText);
 if (!maybeDataset) throw new Error("failed to parse data");
-const dataset: StructuredData = maybeDataset;
+const datasetNoPseudogenes = filterProductType(maybeDataset, productType => productType !== "pseudogene");
+const dataset: StructuredData = datasetNoPseudogenes;
 console.log("Finished parsing data");
 
 type Format = "gaf" | "gene-csv" | "json";
@@ -42,7 +51,7 @@ export class V1Service {
     /**
      * ?filter=""
      * This filter describes which subset of Genes will be used for querying.
-     * The option for filter are "all" | "include_protein" | "exclude_pseudogene".
+     * The option for filter are "all" | "include_protein".
      */
     @QueryParam("filter") maybeFilter: string = "all",
     /**
@@ -115,9 +124,9 @@ export class V1Service {
     /**
      * ?filter=""
      * This filter describes which subset of Genes will be used for querying.
-     * The option for filter are "all" | "include_protein" | "exclude_pseudogene".
+     * The option for filter are "all" | "include_protein".
      */
-    @QueryParam("filter") maybeFilter: string = "exclude_pseudogene",
+    @QueryParam("filter") maybeFilter: string = "all",
   ) {
     const filter = validateFilter(maybeFilter);
     const query: Query = { filter, option: {tag: "QueryGetAll"} };
@@ -214,17 +223,16 @@ function validateSegments(maybeSegment: string): Segment {
 
 /**
  * Validates that a filter string is in a proper format, either
- * 'all', 'include_protein', or 'exclude_pseudogene'.
+ * 'all' or 'include_protein'.
  *
  * @param maybeFilter the parameter to validate.
  */
 function validateFilter(maybeFilter: string): GeneProductTypeFilter {
   if (
     maybeFilter !== "all" &&
-    maybeFilter !== "include_protein" &&
-    maybeFilter !== "exclude_pseudogene"
+    maybeFilter !== "include_protein"
   ) {
-    throw new Errors.BadRequestError("filter must be 'all', 'include_protein', or 'exclude_pseudogene'");
+    throw new Errors.BadRequestError("filter must be 'all' or 'include_protein'");
   }
   return maybeFilter;
 }

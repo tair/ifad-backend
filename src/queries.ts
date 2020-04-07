@@ -35,10 +35,8 @@ export type Strategy = "union" | "intersection";
  *   * all: Will return the original query result unchanged.
  *   * include_protein: Will return only genes and annotations whose
  *                      Gene Product Type is "protein_coding"
- *   * exclude_pseudogene: Will return only genes and annotations whose
- *                         Gene Product Type is _not_ "pseudogene".
  */
-export type GeneProductTypeFilter = "all" | "include_protein" | "exclude_pseudogene";
+export type GeneProductTypeFilter = "all" | "include_protein";
 
 /**
  * A QueryOption describes the strategy and parameters of the query
@@ -105,7 +103,7 @@ export const queryDataset = (
     }
   }
 
-  return filterProductType(result, filter);
+  return filterProteinProductType(result, filter);
 };
 
 /**
@@ -323,7 +321,7 @@ const intersect = (one: StructuredData, two: StructuredData): QueryResult => {
  * @param dataset The dataset to filter over.
  * @param filter The Gene Product Type filter to use.
  */
-export const filterProductType = (dataset: StructuredData, filter: GeneProductTypeFilter): QueryResult => {
+export const filterProteinProductType = (dataset: StructuredData, filter: GeneProductTypeFilter): QueryResult => {
   let predicate: (productType: string) => boolean;
   switch (filter) {
     case "all": {
@@ -333,13 +331,9 @@ export const filterProductType = (dataset: StructuredData, filter: GeneProductTy
       predicate = (productType => productType === "protein_coding");
       break;
     }
-    case "exclude_pseudogene": {
-      predicate = (productType => productType !== "pseudogene");
-      break;
-    }
   }
 
-  return _filterProductType(dataset, predicate);
+  return filterProductType(dataset, predicate);
 };
 
 /**
@@ -350,7 +344,7 @@ export const filterProductType = (dataset: StructuredData, filter: GeneProductTy
  * @param predicate Given the Gene Product Type, determines whether
  *                  to keep Genes with that product type.
  */
-const _filterProductType = (dataset: StructuredData, predicate: (productType: string) => boolean): QueryResult => {
+export const filterProductType = (dataset: StructuredData, predicate: (productType: string) => boolean): QueryResult => {
   const geneIndex: GeneIndex = Object.entries(dataset.genes.index)
     .filter(([_, geneElement]) => predicate(geneElement.gene.GeneProductType))
     .reduce((acc, [geneId, geneElement]) => {
