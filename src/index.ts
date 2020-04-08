@@ -25,6 +25,11 @@ app.use(/\/$/, (req, res) => res.redirect("/app/"));
 app.use("/app/", express.static(process.env["FRONTEND_PUBLIC_PATH"] || resolve("../ifad-frontend/build")));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`🚢 Now listening on 0.0.0.0:${PORT} 🔥`);
 });
+
+const lifetime: string | null = process.env["SERVER_LIFETIME_LENGTH"] || null;
+if (lifetime) {
+    setTimeout(() => server.close(() => console.log("Server closed")), parseInt(lifetime));
+}
