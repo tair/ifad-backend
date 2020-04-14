@@ -82,6 +82,7 @@ git commit and build the frontend docker image, like so:
 ```bash
 # In the frontend repository
 git tag -a "v0.3.0" -m "Bump version to v0.3.0"
+git push origin v0.3.0
 docker build -t <docker repository>/ifad-frontend:v0.3.0 .
 docker push <docker repository>/ifad-frontend:v0.3.0
 ```
@@ -110,6 +111,7 @@ Commit those changes to master, then tag and build it the same way.
 ```bash
 # In the backend repository
 git tag -a "v0.3.0" -m "Bump version to v0.3.0"
+git push origin v0.3.0
 docker build -t <docker repository>/ifad-backend:v0.3.0 .
 docker push <docker repository>/ifad-backend:v0.3.0
 ```
