@@ -16,7 +16,7 @@
     "csv-parse": "^4.4.7",
     "dotenv": "^8.2.0",
     "json2csv": "^4.5.4",
-    "moment": "^2.24.0",
+    "moment": "^2.29.2",
     "ts-node-dev": "^1.0.0-pre.43",
     "typescript": "^3.6.3",
     "typescript-rest": "^2.2.2"
